@@ -15,5 +15,7 @@ namespace MealApp.Models
         public string Email { get; set; }
         public string? ResetPasswordToken { get; set; }
         public DateTime RestPAsswordExpiry { get; set; }
+
+        public int AllowedBookings { get; set; } = 0;
     }
 }

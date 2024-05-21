@@ -38,7 +38,7 @@ namespace MealApp.Controllers
             if (userObj == null)
                 return BadRequest();
 
-            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Username == userObj.Username);
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == userObj.Username);
 
             if (user == null)
                 return NotFound(new { message = "User Not Found!" });
