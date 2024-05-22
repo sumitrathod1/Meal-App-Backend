@@ -36,6 +36,16 @@ namespace MealApp.Controllers
             return Ok(BookingRepository.FindBookings(UserId, StartDate, EndDate));
         }
 
+
+
+
+        // GET: pageload/getallowedbookings
+        [HttpGet("Allowedbookings")]
+        public async Task<IActionResult> FindAccess([FromQuery] string email)
+        {
+            return Ok(UserRepository.FindAccess(email));
+        }
+
         // GET api/<Booking>/5
         [HttpGet("{id}")]
         public string Get(int id)
