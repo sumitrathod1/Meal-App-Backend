@@ -46,10 +46,44 @@ namespace MealApp.Repo
                 return user.AllowedBookings;
             }
 
-            return 0;
+            return -1;
         }
 
 
+        public int FindUserid(string email)
+        {
+            var user =  context.Users.Where(x => x.Email == email).FirstOrDefault();
+            if (user == null)
+            {
+                return -1;
+            }
+           
+           
+            return user.Id;
+
+        }
+
+        public int FindBookingid(int userid, DateTime selecteddate )
+        {
+
+          //  DateOnly selectedDateOnly = DateOnly.FromDateTime(selecteddate);
+
+            var user = context.Bookings.Where(x => x.UserId == userid &&
+                 x.Date.Year == selecteddate.Year &&
+                 x.Date.Month == selecteddate.Month &&
+                 x.Date.Day == selecteddate.Day).FirstOrDefault();
+          
+           
+
+            if (user == null)
+            {
+                return -1;
+            }
+
+            int bookingid = user.Id;
+            return bookingid;
+
+        }
 
     }
 }

@@ -39,12 +39,23 @@ namespace MealApp.Controllers
 
 
 
-        // GET: pageload/getallowedbookings
-        [HttpGet("Allowedbookings")]
-        public async Task<IActionResult> FindAccess([FromQuery] string email)
+        // POST: pageload/getallowedbookings
+        [HttpPost("Allowedbookings")]
+        public async Task<IActionResult> Allowedbooking([FromBody] AllowedBookingDTO allowedBookingDTO)
         {
-            return Ok(UserRepository.FindAccess(email));
+            string email = allowedBookingDTO.Email;
+
+            int allowedBookings = UserRepository.FindAccess(email);  //method used from Userrepo 
+
+            if (allowedBookings >= 0)
+            {
+                return Ok(new { AllowedBookings = allowedBookings });
+            }
+
+            return NotFound(new { Message = "User not found or no allowed bookings" });
         }
+
+
 
         // GET api/<Booking>/5
         [HttpGet("{id}")]
@@ -113,15 +124,34 @@ namespace MealApp.Controllers
 
 
 
-        // PUT Booking/CancelBooking/5
+        // put Booking/CancelBooking/email,date
         // here id is booking id and it will come from userid and date 
-        [HttpPut("CancelBooking/{id}")]
-        public async Task<IActionResult> CancelBooking(int id)
+       
+        [HttpPut("CancelBooking")]
+        public async Task<IActionResult> CancelBooking([FromBody] CancelBookingDTO cancelDTO)
         {
-            Booking Booking = BookingRepository.Find(id);
-           int UserId=Booking.UserId;
-            Booking CancelledBooking=BookingRepository.CancelBooking(id);
-            UserRepository.UpdateAllowedBooking(UserId, +1);
+            DateTime SelectedDate = cancelDTO.selecteddate;
+            string Email = cancelDTO.Email;
+
+            //this will find user id based on emailid
+
+            int userid = UserRepository.FindUserid(Email);
+
+            if (userid == -1)
+            {
+                NotFound(new { message = "User Not Found!" });
+            }
+
+            int bookingid = UserRepository.FindBookingid(userid, SelectedDate);
+
+            if (bookingid == -1)
+            {
+                NotFound(new { message = "booking is not for this day" });
+            }
+
+            Booking CancelledBooking=BookingRepository.CancelBooking(bookingid);
+
+            UserRepository.UpdateAllowedBooking(userid, +1);
             return Ok(CancelledBooking);
         }
 

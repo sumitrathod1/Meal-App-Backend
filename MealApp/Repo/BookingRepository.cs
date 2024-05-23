@@ -25,6 +25,7 @@ namespace MealApp.Repo
             return Update(Booking);
         }
 
+        //this finds booking id based on user id and date /// and userid find by emailid
         public Booking Find(int BookingId)
         { return context.Bookings.Find(BookingId); }
 

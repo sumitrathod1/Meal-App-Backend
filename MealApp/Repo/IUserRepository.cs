@@ -9,5 +9,7 @@ namespace MealApp.Repo
         User Update(User user);
 
         int FindAccess(string email);
+        int FindUserid(string email);
+        int FindBookingid(int userid, DateTime selectedDate);
     }
 }
