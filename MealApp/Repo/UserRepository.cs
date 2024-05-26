@@ -1,4 +1,5 @@
 ﻿using MealApp.Context;
+using MealApp.Migrations;
 using MealApp.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,10 +16,10 @@ namespace MealApp.Repo
         
 
 
-        public int GetAllowedBookings(int UserId)
+        public int GetAllowedAccess(int UserId)
         {
             User user=context.Users.Find(UserId);
-            return user.AllowedBookings;
+            return user.AllowedAccess;
         }
 
         public User Update(User user)
@@ -28,26 +29,43 @@ namespace MealApp.Repo
             context.SaveChanges();
             return user;
         }
-        public void UpdateAllowedBooking(int UserId,int delta)
+        public int UpdateAllowedAccess(int UserId,int bookeddays, int credits)
         {
+
+            int allowedAccess;
             User user = context.Users.Find(UserId);
-            user.AllowedBookings += delta;
-            Update(user);
-            return;
-        }
 
-
-        public int FindAccess(string email)
-        {
-            var user = context.Users.Where(u => u.Email == email).FirstOrDefault();
-
-            if (user != null)
+            if (bookeddays > 0)
             {
-                return user.AllowedBookings;
+               allowedAccess = bookeddays + credits;
+                user.AllowedAccess = allowedAccess;
             }
 
-            return -1;
+           else
+            {
+                allowedAccess = credits;
+                user.AllowedAccess = allowedAccess;
+
+            }
+
+
+
+
+            Update(user);
+            return allowedAccess;
         }
+
+        public User UpdateCredits(int UserId, int delta)
+        {
+            User user = context.Users.Find(UserId);
+            user.BookingDays += delta;
+            user.Credits -= delta;
+            User user1 = Update(user);
+            return user1;
+        }
+
+
+
 
 
         public int FindUserid(string email)
@@ -84,6 +102,8 @@ namespace MealApp.Repo
             return bookingid;
 
         }
+
+        
 
     }
 }

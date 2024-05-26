@@ -26,5 +26,9 @@ namespace MealApp.Models
 
         public Type Type { get; set; }
 
+        public static implicit operator Booking(User v)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

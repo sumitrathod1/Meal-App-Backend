@@ -16,6 +16,10 @@ namespace MealApp.Models
         public string? ResetPasswordToken { get; set; }
         public DateTime RestPAsswordExpiry { get; set; }
 
-        public int AllowedBookings { get; set; } = 0;
+        public int AllowedAccess { get; set; } = 1;
+
+        public int Credits { get; set; } = 0;
+
+        public int BookingDays { get; set;} = 0;
     }
 }

@@ -57,7 +57,13 @@ namespace MealApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
-                    b.Property<int>("AllowedBookings")
+                    b.Property<int>("AllowedAccess")
+                        .HasColumnType("int");
+
+                    b.Property<int>("BookingDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Credits")
                         .HasColumnType("int");
 
                     b.Property<string>("Email")

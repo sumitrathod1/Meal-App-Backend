@@ -5,16 +5,32 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace MealApp.Migrations
 {
-    public partial class v5 : Migration
+    public partial class credits : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "AllowedBookings",
-                table: "users",
-                type: "int",
-                nullable: false,
-                defaultValue: 0);
+            migrationBuilder.CreateTable(
+                name: "users",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Token = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ResetPasswordToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RestPAsswordExpiry = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AllowedAccess = table.Column<int>(type: "int", nullable: false),
+                    Credits = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_users", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "booking",
@@ -49,9 +65,8 @@ namespace MealApp.Migrations
             migrationBuilder.DropTable(
                 name: "booking");
 
-            migrationBuilder.DropColumn(
-                name: "AllowedBookings",
-                table: "users");
+            migrationBuilder.DropTable(
+                name: "users");
         }
     }
 }

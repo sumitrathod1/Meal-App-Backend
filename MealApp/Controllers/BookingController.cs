@@ -39,20 +39,51 @@ namespace MealApp.Controllers
 
 
 
-        // POST: pageload/getallowedbookings
-        [HttpPost("Allowedbookings")]
-        public async Task<IActionResult> Allowedbooking([FromBody] AllowedBookingDTO allowedBookingDTO)
+        // POST: pageload/getallowedaccess
+        [HttpPost("Allowedaccess")]
+        public async Task<IActionResult> Allowedaccess([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
-            string email = allowedBookingDTO.Email;
+            string email = allowedAccessDTO.Email;
+            DateTime Today = DateTime.Now;
+           
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+            int allowedAccess = user.AllowedAccess;
+            DateTime enddate = Today.AddDays(allowedAccess);
 
-            int allowedBookings = UserRepository.FindAccess(email);  //method used from Userrepo 
+            int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
+            int bookeddays = BookingRepository.CountBookings(user.Id, Today, enddate);  //count booked days from today to access day
+                                                                                       
+            user.BookingDays = bookeddays;
+            UserRepository.Update(user);              // strored booked days
 
-            if (allowedBookings >= 0)
+            int allowedAccessnew = UserRepository.UpdateAllowedAccess(user.Id, bookeddays, credits);
+            // this will return and update in database allowedaccess
+           
+
+            if (allowedAccessnew >= 0)
             {
-                return Ok(new { AllowedBookings = allowedBookings });
+                return Ok(new { allowAccess = allowedAccessnew });
             }
 
-            return NotFound(new { Message = "User not found or no allowed bookings" });
+            return NotFound(new { Message = "User not found or no allowed access" });
+        }
+
+
+
+        // POST: pageload/getcredits
+        [HttpPost("Credits")]
+        public async Task<IActionResult> Credits([FromBody] AllowedAccessDTO allowedAccessDTO)
+        {
+            string email = allowedAccessDTO.Email;
+
+            int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
+
+            if (credits >= 0)
+            {
+                return Ok(new { credit = credits });
+            }
+
+            return NotFound(new { Message = "User not found or no allowed credits" });
         }
 
 
@@ -85,8 +116,13 @@ namespace MealApp.Controllers
             {
                 BookingType = Type.Dinner;
             }
-            int UserId = user.Id; 
-            int AllowedBookings = UserRepository.GetAllowedBookings(UserId);
+            int UserId = user.Id;
+           // int bookeddays = user.BookingDays;
+
+            int Credits = user.Credits;
+           // int AllowedAccess = user.AllowedAccess;
+
+            
             int RequestedBookings = 0;
             for (DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate= CurrDate.AddDays(1))
             {
@@ -95,12 +131,13 @@ namespace MealApp.Controllers
                     RequestedBookings++;
                 }
             }
-            if (RequestedBookings > AllowedBookings) {
-                return BadRequest(new { Message = "RequestedBooking > AllowedBookings" });
+            if (RequestedBookings > Credits) {
+                return BadRequest(new { Message = "RequestedBooking > Credits" });
             }
             if(Today.Subtract(StartDate).Days > 0){
                 return BadRequest(new { Message = "StartDate must not be a past date" });
             }
+            //// Bookingdays = RequestedBookings
             List<Booking> SavedBookings=new List<Booking>();
             for(DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate = CurrDate.AddDays(1))
             {
@@ -118,7 +155,14 @@ namespace MealApp.Controllers
                 }
                 
             }
-            UserRepository.UpdateAllowedBooking(UserId, -RequestedBookings);
+
+            User user1 = UserRepository.UpdateCredits(UserId, RequestedBookings);
+
+          
+            int credits = user1.Credits; //         because i think UpdateCredits will update it - RequestedBookings;
+            int bookedday = user1.BookingDays;
+            UserRepository.UpdateAllowedAccess(UserId, bookedday, credits);
+
             return Ok(SavedBookings);
         }
 
@@ -126,40 +170,80 @@ namespace MealApp.Controllers
 
         // put Booking/CancelBooking/email,date
         // here id is booking id and it will come from userid and date 
-       
+
+        //[HttpPut("CancelBooking")]
+        //public async Task<IActionResult> CancelBooking([FromBody] CancelBookingDTO cancelDTO)
+        //{
+        //    DateTime SelectedDate = cancelDTO.selecteddate;
+        //    string Email = cancelDTO.Email;
+
+        //    //this will find user id based on emailid
+
+        //    int userid = UserRepository.FindUserid(Email);
+
+        //    if (userid == -1)
+        //    {
+        //        NotFound(new { message = "User Not Found!" });
+        //    }
+
+        //    int bookingid = UserRepository.FindBookingid(userid, SelectedDate);
+
+        //    if (bookingid == -1)
+        //    {
+        //        NotFound(new { message = "booking is not for this day" });
+        //    }
+
+        //    Booking CancelledBooking=BookingRepository.CancelBooking(bookingid);
+
+        //    UserRepository.UpdateAllowedBooking(userid, +1);
+
+        //    return Ok(CancelledBooking);
+        //}
         [HttpPut("CancelBooking")]
         public async Task<IActionResult> CancelBooking([FromBody] CancelBookingDTO cancelDTO)
         {
             DateTime SelectedDate = cancelDTO.selecteddate;
             string Email = cancelDTO.Email;
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == Email);
 
             //this will find user id based on emailid
-
             int userid = UserRepository.FindUserid(Email);
 
             if (userid == -1)
             {
-                NotFound(new { message = "User Not Found!" });
+                return NotFound(new { message = "User Not Found!" });
             }
 
             int bookingid = UserRepository.FindBookingid(userid, SelectedDate);
 
             if (bookingid == -1)
             {
-                NotFound(new { message = "booking is not for this day" });
+                return NotFound(new { message = "Booking is not for this day" });
             }
 
-            Booking CancelledBooking=BookingRepository.CancelBooking(bookingid);
+            Booking CancelledBooking = BookingRepository.CancelBooking(bookingid);
+                
+            /////////
+            
+            UserRepository.UpdateCredits(userid, -1);
 
-            UserRepository.UpdateAllowedBooking(userid, +1);
+            int credits = user.Credits; //         because i think UpdateCredits will update it - RequestedBookings;
+            int bookeddays = user.BookingDays;
+            UserRepository.UpdateAllowedAccess(userid, bookeddays, credits);
+            
+            
+           
+
+            await _authContext.SaveChangesAsync();
+
             return Ok(CancelledBooking);
         }
 
-       
 
 
-            // DELETE api/<Booking>/5
-            [HttpDelete("{id}")]
+
+        // DELETE api/<Booking>/5
+        [HttpDelete("{id}")]
         public void Delete(int id)
         {
         }

@@ -2,7 +2,7 @@
 
 namespace MealApp.Models.Dto
 {
-    public class AllowedBookingDTO
+    public class AllowedAccessDTO
     {
         [Required]
         public string Email { get; set; }

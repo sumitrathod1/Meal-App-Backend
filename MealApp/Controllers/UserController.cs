@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Cryptography;
 using MealApp.UtilityService;
 using MealApp.Models.Dto;
+using MealApp.Repo;
 
 namespace MealApp.Controllers
 {
@@ -242,6 +243,47 @@ namespace MealApp.Controllers
                 StatusCode = 200,
                 Message = "Password Reset Successfully"
             });
+        }
+
+
+
+        [HttpPost("changePassword")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO changePasswordDTO)
+        {
+            if (changePasswordDTO == null)
+                return BadRequest();
+
+
+            string oldPasswordINPUT = changePasswordDTO.OldPassword;
+            string newPassword = changePasswordDTO.NewPassword;
+            string EMAIL = changePasswordDTO.Email;
+
+           
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == EMAIL);
+            string oldPasswordSTORED = user.Password;
+            if (user == null)
+                return NotFound(new { message = "User Not Found!" });
+
+            if (!PasswordHasher.VerifyPassword(oldPasswordINPUT, oldPasswordSTORED))
+            {
+                return BadRequest(new { Message = "Password is Incorrect" });
+            }
+
+            user.Password = newPassword;
+
+            // Update user entity instead of adding a new one.
+              _authContext.Users.Update(user);
+
+            // Save changes to the database.
+              await _authContext.SaveChangesAsync();
+
+               return Ok(new
+               {
+                   StatusCode = 200,
+                   Message = "Password reset successfully"
+               });
+
+           
         }
     }
 }
