@@ -16,5 +16,6 @@ namespace MealApp.Repo
         int FindDCreddits(string email);
         List<Booking> FindBookings(int UserId, DateTime StartDate, DateTime EndDate);
         int CountBookings(int id, DateTime today, DateTime enddate);
+        Task<List<Booking>> ExistingBookingsAsync(int userId, Models.Type bookingType, DateTime startDate, DateTime endDate);
     }
 }

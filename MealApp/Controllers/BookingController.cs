@@ -19,6 +19,7 @@ namespace MealApp.Controllers
         private readonly IBookingRepository BookingRepository;
         private readonly int id;
 
+
         public BookingController(IUserRepository userRepository, IBookingRepository bookingRepository, AppDbContext appDbContext)
         {
             _authContext = appDbContext;
@@ -44,11 +45,33 @@ namespace MealApp.Controllers
         public async Task<IActionResult> Allowedaccess([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
             string email = allowedAccessDTO.Email;
-            DateTime Today = DateTime.Now;
-           
+            //DateTime tomorrow = DateTime.Now.AddDays(1);
+           // DateTime Today = DateTime.Now;
+            DateTime Today = DateTime.Now.AddDays(6);
+
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
             int allowedAccess = user.AllowedAccess;
-            DateTime enddate = Today.AddDays(allowedAccess);
+                                                             // used to find no. of weekend days in between today and till access days
+                                                               // which will be add to calculate final end date
+                                                               // to provide proper access duration
+           
+            int i = allowedAccess;
+            DateTime CurrDate = Today;
+            while (0 < i)
+            {
+                if (CurrDate.DayOfWeek == DayOfWeek.Saturday || CurrDate.DayOfWeek == DayOfWeek.Sunday)
+                {
+                    i++;
+                    CurrDate = CurrDate.AddDays(1);
+                }
+
+
+                CurrDate = CurrDate.AddDays(1);
+                i--;
+            }
+
+
+            DateTime enddate = CurrDate;// add weekends in end_date
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
             int bookeddays = BookingRepository.CountBookings(user.Id, Today, enddate);  //count booked days from today to access day
@@ -62,7 +85,9 @@ namespace MealApp.Controllers
 
             if (allowedAccessnew >= 0)
             {
-                return Ok(new { allowAccess = allowedAccessnew });
+                return Ok(new { allowAccess = allowedAccessnew });         // from here only allowedaccess is passed
+                                                                           // and frontend will enable that no. of days from 
+                                                                           // today from frontend
             }
 
             return NotFound(new { Message = "User not found or no allowed access" });
@@ -120,9 +145,28 @@ namespace MealApp.Controllers
            // int bookeddays = user.BookingDays;
 
             int Credits = user.Credits;
-           // int AllowedAccess = user.AllowedAccess;
+            // int AllowedAccess = user.AllowedAccess;
 
-            
+            // Check for overlapping bookings
+            var existingBookings = await BookingRepository.ExistingBookingsAsync(UserId, BookingType, StartDate, EndDate);
+
+            List<DateTime> conflictingDates = new List<DateTime>();
+            for (DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate = CurrDate.AddDays(1))
+            {
+                if (existingBookings.Any(b => b.Date == CurrDate))
+                {
+                    conflictingDates.Add(CurrDate);
+                }
+            }
+
+            if (conflictingDates.Any())
+            {
+                string conflictDatesMessage = string.Join(", ", conflictingDates.Select(d => d.ToString("yyyy-MM-dd")));
+                return BadRequest(new { Message = $"Booking for the following dates is already booked: {conflictDatesMessage}" });
+            }
+
+
+
             int RequestedBookings = 0;
             for (DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate= CurrDate.AddDays(1))
             {
@@ -130,6 +174,7 @@ namespace MealApp.Controllers
                 {
                     RequestedBookings++;
                 }
+
             }
             if (RequestedBookings > Credits) {
                 return BadRequest(new { Message = "RequestedBooking > Credits" });

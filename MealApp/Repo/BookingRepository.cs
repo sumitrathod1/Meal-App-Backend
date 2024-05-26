@@ -1,5 +1,6 @@
 ﻿using MealApp.Context;
 using MealApp.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace MealApp.Repo
 {
@@ -47,6 +48,15 @@ namespace MealApp.Repo
         {
             return context.Bookings.Where(booking=>booking.UserId == UserId && booking.Date >= StartDate && booking.Date <= EndDate).ToList();
         }
+
+        //find list of existing bookings of specific user and specific Type lunch dinner and gives only booked dates
+        public async Task<List<Booking>> ExistingBookingsAsync(int userId, Models.Type bookingType, DateTime startDate, DateTime endDate)
+        {
+            return await context.Bookings
+                .Where(b => b.UserId == userId && b.Type == bookingType && b.Status == Status.Booked && b.Date >= startDate && b.Date <= endDate)
+                .ToListAsync();
+        }
+
 
         //gives booked days from today to allowedaccess
         public int CountBookings(int UserId, DateTime StartDate, DateTime EndDate)
