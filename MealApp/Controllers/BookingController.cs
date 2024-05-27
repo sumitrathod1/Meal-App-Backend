@@ -1,4 +1,5 @@
 ﻿using MealApp.Context;
+using MealApp.Migrations;
 using MealApp.Models;
 using MealApp.Models.Dto;
 using MealApp.Repo;
@@ -20,16 +21,19 @@ namespace MealApp.Controllers
         private readonly IUserRepository UserRepository;
         private readonly IBookingRepository BookingRepository;
         private readonly IEmailRepository _emailRepository;
+        private readonly INotificationRepository _NotificationRepository;
+        private readonly NotificationRepository notificationRepository;
         private readonly int id;
 
 
-        public BookingController(IUserRepository userRepository, IConfiguration configuration, IEmailRepository EmailRepository, IBookingRepository bookingRepository, AppDbContext appDbContext)
+        public BookingController(IUserRepository userRepository,INotificationRepository notificationRepository, IConfiguration configuration, IEmailRepository EmailRepository, IBookingRepository bookingRepository, AppDbContext appDbContext)
         {
             _authContext = appDbContext;
             _configration = configuration;
             _emailRepository = EmailRepository;
             UserRepository = userRepository;
             BookingRepository = bookingRepository;
+            _NotificationRepository = notificationRepository;
         }
 
         // GET: Bookings/ViewBookings
@@ -86,14 +90,41 @@ namespace MealApp.Controllers
 
             int allowedAccessnew = UserRepository.UpdateAllowedAccess(user.Id, bookeddays, credits);
             // this will return and update in database allowedaccess
-           
+         
+            if (allowedAccessnew < 3 && allowedAccessnew >0)
+            {               
+                    //send notification to reminde about low access
+                    var notification = new Notification
+                    {
+                        UserId = user.Id,
+                        Description = "Reminder: " + $"Only {allowedAccessnew} coupons are left.",
+                        CreatedAt = DateTime.Now
+                    };
+                    await _NotificationRepository.AddNotificationAsync(notification);              
 
-            if (allowedAccessnew >= 0)
+            }
+
+            if (allowedAccessnew > 0)
             {
                 return Ok(new { allowAccess = allowedAccessnew });         // from here only allowedaccess is passed
                                                                            // and frontend will enable that no. of days from 
                                                                            // today from frontend
             }
+
+            if(allowedAccess == 0)
+            {
+                var notification = new Notification
+                {
+                    UserId = user.Id,
+                    Description = "Expired: " + "Please renew the Meal.",
+                    CreatedAt = DateTime.Now
+                };
+               await _NotificationRepository.AddNotificationAsync(notification);
+                return Ok(new { allowAccess = allowedAccessnew });
+
+            }
+
+
 
             return NotFound(new { Message = "User not found or no allowed access" });
         }
@@ -206,6 +237,9 @@ namespace MealApp.Controllers
                 
             }
 
+            // Save bookings before updating user data
+            await _authContext.SaveChangesAsync();
+
             User user1 = UserRepository.UpdateCredits(UserId, RequestedBookings);
 
           
@@ -215,6 +249,16 @@ namespace MealApp.Controllers
 
 
 
+            // Create and save notification
+            var notification = new Notification
+            {
+                UserId = UserId,
+                
+                Description = $"Your meal has been booked from {StartDate.ToString("MMMM dd, yyyy")} to {EndDate.ToString("MMMM dd, yyyy")}.",
+                CreatedAt = DateTime.Now
+            };
+            await _NotificationRepository.AddNotificationAsync(notification);
+
             // Send confirmation email
             string from = _configration["emailsettings:from"];
             string subject = "Booking Confirmation";
@@ -222,6 +266,7 @@ namespace MealApp.Controllers
             var emailModel = new EmailModel(user.Email, subject, body);
             _emailRepository.SendEmail(emailModel);
 
+            // Save changes to the context after sending the email
             await _authContext.SaveChangesAsync();
 
             return Ok(SavedBookings);
@@ -301,6 +346,16 @@ namespace MealApp.Controllers
                 string body = $"Hello {user.FirstName},\n\nYour booking for {SelectedDate.ToString("MMMM dd, yyyy")} has been successfully canceled.\n\nBest regards,\nYour Rishabh Software";
                 var emailModel = new EmailModel(Email, subject, body);
                 _emailRepository.SendEmail(emailModel);
+
+
+                // Create and save notification
+                var notification = new Notification
+                {
+                    UserId = userid,
+                    Description = "MealCancelled: " + $"Your meal has been Cancelled for {SelectedDate.ToString("MMMM dd, yyyy")}.",
+                    CreatedAt = DateTime.Now
+                };
+                await _NotificationRepository.AddNotificationAsync(notification);
 
                 await _authContext.SaveChangesAsync();
 

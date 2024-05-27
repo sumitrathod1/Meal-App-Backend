@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MealApp.Repo
 {
     public class UserRepository : IUserRepository
+
     {
         private readonly AppDbContext context;
         public UserRepository(AppDbContext context)

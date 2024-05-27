@@ -25,11 +25,14 @@ namespace MealApp.Controllers
         private readonly AppDbContext _authContext;
         private readonly IConfiguration _configration;
         private readonly IEmailRepository _emailRepository;
-        public UserController(AppDbContext appDbContext, IConfiguration configuration, IEmailRepository emailrepository)
+        private readonly INotificationRepository _NotificationRepository;
+      //  private readonly NotificationRepository notificationRepository;
+        public UserController(AppDbContext appDbContext, IConfiguration configuration, INotificationRepository notificationRepository, IEmailRepository emailrepository)
         {
             _authContext = appDbContext;
             _configration = configuration;
             _emailRepository = emailrepository;
+            _NotificationRepository = notificationRepository;
         }
 
         [HttpPost("authenticate")]
@@ -85,6 +88,14 @@ namespace MealApp.Controllers
             //
             await _authContext.Users.AddAsync(userObj);
             await _authContext.SaveChangesAsync();
+            
+            // email for successfull registration
+
+            string from = _configration["emailsettings:from"];
+            string subject = "Successfully Registered ";
+            string body = $"Hello {userObj.FirstName},\n\n You are successfully registered in Rishabh Meal. Now you can book your delicious food. \n we are concern about healthy food.\n\nBest regards,\nYour Rishabh Software";
+            var emailModel = new EmailModel(userObj.Email, subject, body);
+            _emailRepository.SendEmail(emailModel);
             return Ok(new
             {
                 message = "User Registered!"
@@ -273,9 +284,18 @@ namespace MealApp.Controllers
 
             // Update user entity instead of adding a new one.
               _authContext.Users.Update(user);
-
+            //
+            DateTime time = DateTime.Now;
+            var notification = new Notification
+            {
+                UserId = user.Id,
+                Description = "NewPassword_Set: " + $"Your password has been Changed on {time}.",
+                CreatedAt = DateTime.Now
+            };
+            await _NotificationRepository.AddNotificationAsync(notification);
+        
             // Save changes to the database.
-              await _authContext.SaveChangesAsync();
+            await _authContext.SaveChangesAsync();
 
                return Ok(new
                {

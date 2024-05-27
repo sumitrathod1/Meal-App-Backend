@@ -13,10 +13,13 @@ namespace MealApp.Context
         public DbSet<User> Users {get;set;}
         public DbSet<Booking> Bookings { get;set;}
 
+        public DbSet<Notification> notifications { get;set;}
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>().ToTable("users");
             modelBuilder.Entity<Booking>().ToTable("booking");
+            modelBuilder.Entity<Notification>().ToTable("notification");
         }
         
     }
