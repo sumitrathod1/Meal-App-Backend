@@ -329,7 +329,7 @@ namespace MealApp.Controllers
 
             Booking CancelledBooking = BookingRepository.CancelBooking(bookingid);
 
-            /////////
+            //
             if (CancelledBooking != null)
             {
 

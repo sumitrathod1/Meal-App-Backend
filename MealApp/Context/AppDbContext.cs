@@ -15,11 +15,14 @@ namespace MealApp.Context
 
         public DbSet<Notification> notifications { get;set;}
 
+        public DbSet<Coupon> coupons { get;set;}
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>().ToTable("users");
             modelBuilder.Entity<Booking>().ToTable("booking");
             modelBuilder.Entity<Notification>().ToTable("notification");
+            modelBuilder.Entity<Coupon>().ToTable("coupon");
         }
         
     }
