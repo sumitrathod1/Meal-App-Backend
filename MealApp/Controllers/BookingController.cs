@@ -4,6 +4,7 @@ using MealApp.Models.Dto;
 using MealApp.Repo;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Type = MealApp.Models.Type;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -15,14 +16,18 @@ namespace MealApp.Controllers
     public class BookingController : ControllerBase
     {
         private readonly AppDbContext _authContext;
+        private readonly IConfiguration _configration;
         private readonly IUserRepository UserRepository;
         private readonly IBookingRepository BookingRepository;
+        private readonly IEmailRepository _emailRepository;
         private readonly int id;
 
 
-        public BookingController(IUserRepository userRepository, IBookingRepository bookingRepository, AppDbContext appDbContext)
+        public BookingController(IUserRepository userRepository, IConfiguration configuration, IEmailRepository EmailRepository, IBookingRepository bookingRepository, AppDbContext appDbContext)
         {
             _authContext = appDbContext;
+            _configration = configuration;
+            _emailRepository = EmailRepository;
             UserRepository = userRepository;
             BookingRepository = bookingRepository;
         }
@@ -204,9 +209,20 @@ namespace MealApp.Controllers
             User user1 = UserRepository.UpdateCredits(UserId, RequestedBookings);
 
           
-            int credits = user1.Credits; //         because i think UpdateCredits will update it - RequestedBookings;
+            int credits = user1.Credits; //    
             int bookedday = user1.BookingDays;
             UserRepository.UpdateAllowedAccess(UserId, bookedday, credits);
+
+
+
+            // Send confirmation email
+            string from = _configration["emailsettings:from"];
+            string subject = "Booking Confirmation";
+            string body = $"Hello {user.FirstName},\n\nYour booking from {StartDate.ToString("MMMM dd, yyyy")} to {EndDate.ToString("MMMM dd, yyyy")} has been successfully created.\n\nBest regards,\nYour Rishabh Software";
+            var emailModel = new EmailModel(user.Email, subject, body);
+            _emailRepository.SendEmail(emailModel);
+
+            await _authContext.SaveChangesAsync();
 
             return Ok(SavedBookings);
         }
@@ -267,22 +283,38 @@ namespace MealApp.Controllers
             }
 
             Booking CancelledBooking = BookingRepository.CancelBooking(bookingid);
-                
-            /////////
-            
-            UserRepository.UpdateCredits(userid, -1);
 
-            int credits = user.Credits; //         because i think UpdateCredits will update it - RequestedBookings;
-            int bookeddays = user.BookingDays;
-            UserRepository.UpdateAllowedAccess(userid, bookeddays, credits);
-            
+            /////////
+            if (CancelledBooking != null)
+            {
+
+                UserRepository.UpdateCredits(userid, -1);
+
+                int credits = user.Credits; //         because i think UpdateCredits will update it - RequestedBookings;
+                int bookeddays = user.BookingDays;
+                UserRepository.UpdateAllowedAccess(userid, bookeddays, credits);
+
+               
+                // Send cancellation email
+                string from = _configration["emailsettings:from"];
+                string subject = "Booking Cancellation Confirmation";
+                string body = $"Hello {user.FirstName},\n\nYour booking for {SelectedDate.ToString("MMMM dd, yyyy")} has been successfully canceled.\n\nBest regards,\nYour Rishabh Software";
+                var emailModel = new EmailModel(Email, subject, body);
+                _emailRepository.SendEmail(emailModel);
+
+                await _authContext.SaveChangesAsync();
+
+                return Ok(new { message = "Booking canceled successfully and email sent!" });
+            }
+
+            return StatusCode(500, new { message = "Error occurred while canceling the booking" });
+        }
+
+      
             
            
 
-            await _authContext.SaveChangesAsync();
-
-            return Ok(CancelledBooking);
-        }
+         
 
 
 

@@ -12,7 +12,7 @@ using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Cryptography;
-using MealApp.UtilityService;
+
 using MealApp.Models.Dto;
 using MealApp.Repo;
 
@@ -24,12 +24,12 @@ namespace MealApp.Controllers
     {
         private readonly AppDbContext _authContext;
         private readonly IConfiguration _configration;
-        private readonly IEmailService _emailService;
-        public UserController(AppDbContext appDbContext, IConfiguration configuration, IEmailService emailService)
+        private readonly IEmailRepository _emailRepository;
+        public UserController(AppDbContext appDbContext, IConfiguration configuration, IEmailRepository emailrepository)
         {
             _authContext = appDbContext;
             _configration = configuration;
-            _emailService = emailService;
+            _emailRepository = emailrepository;
         }
 
         [HttpPost("authenticate")]
@@ -200,7 +200,7 @@ namespace MealApp.Controllers
             user.RestPAsswordExpiry = DateTime.Now.AddMinutes(15);
             string from = _configration["emailsettings:from"];
             var emailmodel = new EmailModel(email, "reset password!!", EmailBody.EmailStringBody(email, emaitoken));
-            _emailService.SendEmail(emailmodel);
+            _emailRepository.SendEmail(emailmodel);
             _authContext.Entry(user).State = EntityState.Modified;
             await _authContext.SaveChangesAsync();
             await _authContext.AddRangeAsync();
@@ -269,7 +269,7 @@ namespace MealApp.Controllers
                 return BadRequest(new { Message = "Password is Incorrect" });
             }
 
-            user.Password = newPassword;
+            user.Password = PasswordHasher.HashPassword(newPassword);  
 
             // Update user entity instead of adding a new one.
               _authContext.Users.Update(user);
