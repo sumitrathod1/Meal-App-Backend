@@ -17,6 +17,11 @@ namespace MealApp.Repo
 
             
         }
+        public async Task RemoveCouponAsync(Coupon coupon)
+        {
+            _authContext.coupons.Remove(coupon);
+            await _authContext.SaveChangesAsync();
+        }
         public string EncodeString(string input)
         {
             StringBuilder encoded = new StringBuilder();

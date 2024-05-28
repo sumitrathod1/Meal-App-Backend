@@ -17,5 +17,8 @@ namespace MealApp.Repo
         List<Booking> FindBookings(int UserId, DateTime StartDate, DateTime EndDate);
         int CountBookings(int id, DateTime today, DateTime enddate);
         Task<List<Booking>> ExistingBookingsAsync(int userId, Models.Type bookingType, DateTime startDate, DateTime endDate);
+
+        Task<Booking> GetBookingStatusByUserIdAsync(int userId);
+        Task ChangeBookingStatusAsync(int userId, DateTime today);
     }
 }

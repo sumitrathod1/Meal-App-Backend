@@ -1,4 +1,7 @@
 ﻿
+using MealApp.Migrations;
+using MealApp.Models;
+
 namespace MealApp.Repo
 {
     public interface ICouponRepository
@@ -8,6 +11,8 @@ namespace MealApp.Repo
         public string DecodeString(string input);
 
         Task SaveCouponCodeAsync(int userid, string code);
+
+        Task RemoveCouponAsync(Coupon coupon);
 
     }
 }

@@ -142,5 +142,22 @@ namespace MealApp.Repo
 
             return -1;
         }
+
+        public async Task ChangeBookingStatusAsync(int userId ,DateTime today)
+        {
+            
+            var booking = await context.Bookings.FirstOrDefaultAsync(b => b.UserId == userId && (b.Date.Date == today.Date));
+            if (booking != null)
+            {
+                booking.Status = Status.Used;
+                await context.SaveChangesAsync();
+            }
+        }
+
+
+        public async Task<Booking> GetBookingStatusByUserIdAsync(int userId)
+        {
+            return await context.Bookings.FirstOrDefaultAsync(x => x.UserId == userId);
+        }
     }
 }
