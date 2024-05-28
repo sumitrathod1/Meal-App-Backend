@@ -43,11 +43,42 @@ namespace MealApp.Repo
         //    return context.Bookings.Find(BookingId);
         //}
 
-
-        public List<Booking> FindBookings(int UserId, DateTime StartDate, DateTime EndDate)
+        //it check that user have booked todays meal or not
+        public async Task<bool> IsBookedAsync(string email)
         {
-            return context.Bookings.Where(booking=>booking.UserId == UserId && booking.Date >= StartDate && booking.Date <= EndDate).ToList();
+            DateTime today = DateTime.Today; // Using DateTime.Today to get only the date part without the time component
+            var user = await context.Users.FirstOrDefaultAsync(x => x.Email == email);
+
+            if (user == null)
+            {
+                return false;
+            }
+
+            int userId = user.Id;
+            var booking = await context.Bookings
+                .FirstOrDefaultAsync(y => y.UserId == userId && y.Date.Date == today); // Compare only the date part
+
+            if (booking != null && booking.Status == Status.Booked)
+            {
+                return true;
+            }
+
+            return false;
         }
+
+
+        public List<DateTime> FindBookingDates(int userId)
+        {
+            var bookingDates = context.Bookings
+                .Where(booking => booking.UserId == userId && (booking.Status == Status.Booked || booking.Status == Status.Used))
+                .Select(booking => booking.Date) // Convert DateTime to DateOnly
+                .ToList();
+
+            return bookingDates;
+        }
+
+
+
 
         //find list of existing bookings of specific user and specific Type lunch dinner and gives only booked dates
         public async Task<List<Booking>> ExistingBookingsAsync(int userId, Models.Type bookingType, DateTime startDate, DateTime endDate)

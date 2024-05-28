@@ -34,7 +34,7 @@ namespace MealApp.Controllers
 
         // generate QR
         [HttpPost("GenerateCouponCode")]
-        public async Task<IActionResult> GenerateCouponCode([FromBody] CouponDTO couponDTO)
+        public async Task<IActionResult> GenerateCouponCode([FromBody] EmailDTO couponDTO)
         {
             string email = couponDTO.Email;
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);

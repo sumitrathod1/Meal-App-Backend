@@ -1,6 +1,6 @@
 ﻿namespace MealApp.Models.Dto
 {
-    public class CouponDTO
+    public class EmailDTO
     {
 
         public string Email { get; set; }

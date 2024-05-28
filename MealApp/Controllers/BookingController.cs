@@ -36,14 +36,17 @@ namespace MealApp.Controllers
             _NotificationRepository = notificationRepository;
         }
 
-        // GET: Bookings/ViewBookings
-        [HttpGet("ViewBookings")]
+        // Post: Bookings/ViewBookings / load on view booking button
+        [HttpPost("ViewBookings")]
         public async Task<IActionResult> ViewBookings(ViewBookingsDTO bookingsDTO)
         {
-            DateTime StartDate = bookingsDTO.StartDate;
-            DateTime EndDate = bookingsDTO.EndDate;
-            int UserId = bookingsDTO.UserId;
-            return Ok(BookingRepository.FindBookings(UserId, StartDate, EndDate));
+            string email = bookingsDTO.Email;
+             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+            int userid = user.Id;
+  
+
+          
+            return Ok(BookingRepository.FindBookingDates(userid));
         }
 
 
@@ -131,19 +134,22 @@ namespace MealApp.Controllers
 
 
 
-        // POST: pageload/getcredits
-        [HttpPost("Credits")]
+        // POST: pageload/getcredits and today's booking status
+        [HttpPost("Credits_and_bookingstatus")]
         public async Task<IActionResult> Credits([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
             string email = allowedAccessDTO.Email;
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
+            Boolean isbooked = await BookingRepository.IsBookedAsync(email); // methos used fro checking user's today's booking
+
 
             if (credits >= 0)
             {
-                return Ok(new { credit = credits });
+                return Ok(new { credit = credits , todays_booking = isbooked});
             }
 
+           
             return NotFound(new { Message = "User not found or no allowed credits" });
         }
 
