@@ -58,8 +58,8 @@ namespace MealApp.Controllers
         {
             string email = allowedAccessDTO.Email;
             //DateTime tomorrow = DateTime.Now.AddDays(1);
-           // DateTime Today = DateTime.Now;
-            DateTime Today = DateTime.Now.AddDays(6);
+            DateTime Today = DateTime.Now;
+           // DateTime Today = DateTime.Now.AddDays(6);
 
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
             int allowedAccess = user.AllowedAccess;
@@ -103,7 +103,10 @@ namespace MealApp.Controllers
                         Description = "Reminder: " + $"Only {allowedAccessnew} coupons are left.",
                         CreatedAt = DateTime.Now
                     };
-                    await _NotificationRepository.AddNotificationAsync(notification);              
+                    await _NotificationRepository.AddNotificationAsync(notification);  
+                
+                // send email
+
 
             }
 
@@ -156,12 +159,6 @@ namespace MealApp.Controllers
 
 
 
-        // GET api/<Booking>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
 
         // POST api/<Booking>
         [HttpPost("CreateBooking")]
@@ -170,6 +167,13 @@ namespace MealApp.Controllers
             DateTime StartDate = bookingDTO.StartDate;
             DateTime EndDate= bookingDTO.EndDate;
             DateTime Today= DateTime.Now;
+
+            if(StartDate > EndDate)
+            {
+                return BadRequest(new { Message = "Select proper Start Date and End date" });
+
+            }
+
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == bookingDTO.Email);
             if (user == null)
             {
@@ -254,7 +258,13 @@ namespace MealApp.Controllers
             int bookedday = user1.BookingDays;
             UserRepository.UpdateAllowedAccess(UserId, bookedday, credits);
 
+            if(StartDate.DayOfWeek == DayOfWeek.Saturday) { StartDate = StartDate.AddDays(2); }
+           
+            if(StartDate.DayOfWeek == DayOfWeek.Sunday) { StartDate = StartDate.AddDays(1); }
 
+            if(EndDate.DayOfWeek == DayOfWeek.Saturday) { EndDate = EndDate.AddDays(2); }
+
+            if(EndDate.DayOfWeek == DayOfWeek.Sunday) { EndDate = EndDate.AddDays(1); }
 
             // Create and save notification
             var notification = new Notification
@@ -285,6 +295,9 @@ namespace MealApp.Controllers
         [HttpPost("CreateBookingForTomorrow")]
         public async Task<IActionResult> CreateBookingForTomorrow([FromBody] QuickBookingDTO qbookingDTO)
         {
+            // DateTime today1 = DateTime.Now;
+            //  DateTime today = today1.AddDays(2);
+
             DateTime today = DateTime.Now;
             DateTime bookingDate = today.AddDays(1);
 
