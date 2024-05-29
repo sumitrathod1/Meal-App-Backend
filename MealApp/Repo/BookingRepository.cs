@@ -44,9 +44,9 @@ namespace MealApp.Repo
         //}
 
         //it check that user have booked todays meal or not
-        public async Task<bool> IsBookedAsync(string email)
+        public async Task<bool> IsBookedAsync(string email, DateTime selecteddate)
         {
-            DateTime today = DateTime.Today; // Using DateTime.Today to get only the date part without the time component
+           // DateTime today = DateTime.Today; // Using DateTime.Today to get only the date part without the time component
             var user = await context.Users.FirstOrDefaultAsync(x => x.Email == email);
 
             if (user == null)
@@ -56,7 +56,7 @@ namespace MealApp.Repo
 
             int userId = user.Id;
             var booking = await context.Bookings
-                .FirstOrDefaultAsync(y => y.UserId == userId && y.Date.Date == today); // Compare only the date part
+                .FirstOrDefaultAsync(y => y.UserId == userId && y.Date.Date == selecteddate.Date); // Compare only the date part
 
             if (booking != null && booking.Status == Status.Booked)
             {

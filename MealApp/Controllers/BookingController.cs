@@ -134,14 +134,15 @@ namespace MealApp.Controllers
 
 
 
-        // POST: pageload/getcredits and today's booking status
+        // POST: pageload/getcredits and selected date booking status
         [HttpPost("Credits_and_bookingstatus")]
         public async Task<IActionResult> Credits([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
             string email = allowedAccessDTO.Email;
+            DateTime selecteddate = allowedAccessDTO.SelectedDate;
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
-            Boolean isbooked = await BookingRepository.IsBookedAsync(email); // methos used fro checking user's today's booking
+            Boolean isbooked = await BookingRepository.IsBookedAsync(email, selecteddate); // methos used fro checking user's today's booking
 
 
             if (credits >= 0)
@@ -278,6 +279,93 @@ namespace MealApp.Controllers
             return Ok(SavedBookings);
         }
 
+
+
+        //post for Quick Booking
+        [HttpPost("CreateBookingForTomorrow")]
+        public async Task<IActionResult> CreateBookingForTomorrow([FromBody] QuickBookingDTO qbookingDTO)
+        {
+            DateTime today = DateTime.Now;
+            DateTime bookingDate = today.AddDays(1);
+
+            // If bookingDate is Saturday, add 2 days to make it Monday
+            if (bookingDate.DayOfWeek == DayOfWeek.Saturday)
+            {
+                bookingDate = bookingDate.AddDays(2);
+            }
+            // If bookingDate is Sunday, add 1 day to make it Monday
+            else if (bookingDate.DayOfWeek == DayOfWeek.Sunday)
+            {
+                bookingDate = bookingDate.AddDays(1);
+            }
+
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == qbookingDTO.Email);
+            if (user == null)
+            {
+                return NotFound(new { message = "User Not Found!" });
+            }
+
+            Type bookingType = Type.Lunch; // Default booking type
+            int userId = user.Id;
+            int credits = user.Credits;
+
+            // Check for existing booking on the target date
+            var existingBooking = await _authContext.Bookings.FirstOrDefaultAsync(x=>x.UserId == userId && x.Status == Status.Booked && x.Type== Type.Lunch && x.Date.Date == bookingDate.Date);
+             if(existingBooking != null)
+            {
+                return BadRequest(new { Message = $"Booking for {bookingDate.ToString("yyyy-MM-dd")} is already booked." });
+
+            }
+
+
+
+
+
+            if (credits < 1)
+            {
+                return BadRequest(new { Message = "Not enough credits for the booking." });
+            }
+
+            Booking newBooking = new Booking
+            {
+                UserId = userId,
+                Date = bookingDate,
+                Type = bookingType,
+                Status = Status.Booked
+            };
+            Booking savedBooking = BookingRepository.Add(newBooking);
+
+            // Save booking before updating user data
+            await _authContext.SaveChangesAsync();
+
+            User user1 = UserRepository.UpdateCredits(userId,1);
+
+
+              int Credits = user1.Credits; //    
+            int bookedday = user1.BookingDays;
+            UserRepository.UpdateAllowedAccess(userId, bookedday, Credits);
+
+            // Create and save notification
+            var notification = new Notification
+            {
+                UserId = userId,
+                Description = $"Your meal has been booked for {bookingDate.ToString("MMMM dd, yyyy")}.",
+                CreatedAt = DateTime.Now
+            };
+            await _NotificationRepository.AddNotificationAsync(notification);
+
+            ////// send confirmation email
+            string from = _configration["emailsettings:from"];
+            string subject = "Booking Confirmation";
+
+            string body = $"hello {user.FirstName},\n\nyour booking for {bookingDate.ToString("mmmm dd, yyyy")} has been successfully created.\n\nbest regards,\nyour rishabh software"; var emailModel = new EmailModel(user.Email, subject, body);
+            _emailRepository.SendEmail(emailModel);
+
+            // Save changes to the context after sending the email
+            await _authContext.SaveChangesAsync();
+
+            return Ok(savedBooking);
+        }
 
 
         // put Booking/CancelBooking/email,date

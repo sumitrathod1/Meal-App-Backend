@@ -7,5 +7,7 @@ namespace MealApp.Models.Dto
         [Required]
         public string Email { get; set; }
 
+        public DateTime SelectedDate { get; set; }
+
     }
 }

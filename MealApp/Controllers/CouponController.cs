@@ -45,6 +45,7 @@ namespace MealApp.Controllers
 
             int userId = user.Id;
             string username = user.Username;
+            string Name = user.FirstName;
             DateTime currentDate = DateTime.Now;
             DateTime expirationTime = currentDate.AddMinutes(4);
 
@@ -75,7 +76,7 @@ namespace MealApp.Controllers
             // Save the encoded string as a coupon code
             await _couponRepository.SaveCouponCodeAsync(userId, encodedString);
 
-            return Ok(new { couponCode = encodedString });
+            return Ok(new { couponCode = encodedString , FirstName = Name });
         }
 
 
