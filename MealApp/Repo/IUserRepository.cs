@@ -13,5 +13,8 @@ namespace MealApp.Repo
         
         int FindUserid(string email);
         int FindBookingid(int userid, DateTime selectedDate);
+
+
+        public Task AddContectusDataAsync(Contect contect);
     }
 }

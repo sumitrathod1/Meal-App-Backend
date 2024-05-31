@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 
 using MealApp.Models.Dto;
 using MealApp.Repo;
+using Org.BouncyCastle.Bcpg;
 
 namespace MealApp.Controllers
 {
@@ -26,13 +27,15 @@ namespace MealApp.Controllers
         private readonly IConfiguration _configration;
         private readonly IEmailRepository _emailRepository;
         private readonly INotificationRepository _NotificationRepository;
+        private readonly IUserRepository _userRepository;
       //  private readonly NotificationRepository notificationRepository;
-        public UserController(AppDbContext appDbContext, IConfiguration configuration, INotificationRepository notificationRepository, IEmailRepository emailrepository)
+        public UserController(AppDbContext appDbContext,IUserRepository userRepository, IConfiguration configuration, INotificationRepository notificationRepository, IEmailRepository emailrepository)
         {
             _authContext = appDbContext;
             _configration = configuration;
             _emailRepository = emailrepository;
             _NotificationRepository = notificationRepository;
+            _userRepository = userRepository;
         }
 
         [HttpPost("authenticate")]
@@ -254,7 +257,7 @@ namespace MealApp.Controllers
 
             // Send reminder for renewal of meal email
             string from = _configration["emailsettings:from"];
-            string subject = "Reminder of Meal Renewal";
+            string subject = "Password Changed!";
             string body = $"Hello {user.FirstName},\n\n" +
                "We wanted to let you know that your password has been changed successfully.\n\n" +
                "If you did not make this change, please contact our support team immediately to secure your account.\n\n" +
@@ -276,6 +279,72 @@ namespace MealApp.Controllers
                });
 
            
+        }
+
+
+        [HttpPost("contectus")]
+        public async Task<IActionResult> contect([FromBody] ContectUsDTO contectDTO)
+        {
+            if (contectDTO == null)
+                return BadRequest();
+
+
+            string fullname = contectDTO.FullName;
+            string email = contectDTO.Email;
+            string sub = contectDTO.Subject;
+            string message = contectDTO.Body;
+
+
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+         
+            if (user == null)
+            {
+                var contect = new Contect
+                {
+                    FullName = fullname,
+                    Email = email,
+                    Subject = sub,
+                    Body = message
+
+                };
+                await _userRepository.AddContectusDataAsync(contect);
+
+            }
+            else
+            {
+                int userid = user.Id;
+                var contect = new Contect
+                {
+                    FullName = fullname,
+                    Email = email,
+                    UserId = userid,
+                    Subject = sub,
+                    Body = message
+
+                };
+                await _userRepository.AddContectusDataAsync(contect);
+            }
+
+
+            // Send reminder for renewal of meal email
+            // from : 00aj0009 to 00aj0009 (rise to rise)
+
+            string ToEmailAddress = "00aj0009@gmail.com";
+            string from = _configration["emailsettings:from"];
+            string subject = sub;
+            string body = $"Hello RISE Team,\n\n" +
+              message + "Best regards,\n" + fullname;
+
+            var emailModel = new EmailModel(ToEmailAddress, subject, body);
+            _emailRepository.SendEmail(emailModel);
+
+
+
+
+
+            return Ok(new  { Message = "Email sent...Suppoert Team will shortly contect you or gives attention on this."  });
+
+
         }
     }
 }

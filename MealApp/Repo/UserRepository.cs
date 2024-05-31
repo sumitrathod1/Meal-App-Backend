@@ -104,7 +104,12 @@ namespace MealApp.Repo
 
         }
 
-        
+        public async Task AddContectusDataAsync(Contect contect)
+        {
+            context.contects.Add(contect);
+            await context.SaveChangesAsync();
+           
+        }
 
     }
 }
