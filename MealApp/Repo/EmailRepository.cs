@@ -16,7 +16,7 @@ namespace MealApp.Repo
         {
             var emailMessage = new MimeMessage();
             var from = _config["EmailSettings:From"];
-            emailMessage.From.Add(new MailboxAddress("Meal App", from));
+            emailMessage.From.Add(new MailboxAddress("RISE MEAL FACILITY", from));
             emailMessage.To.Add(new MailboxAddress(emailModel.To, emailModel.To));
             emailMessage.Subject = emailModel.Subject;
             emailMessage.Body = new TextPart(MimeKit.Text.TextFormat.Html)

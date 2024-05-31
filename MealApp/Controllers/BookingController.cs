@@ -111,6 +111,22 @@ namespace MealApp.Controllers
                             CreatedAt = DateTime.Now
                         };
                         await _NotificationRepository.AddNotificationAsync(notification);
+                        user.RenewalMailSentDate = Today;
+                        _authContext.SaveChanges();
+
+                        // Send reminder for expired of meal email
+                        string from = _configration["emailsettings:from"];
+                        string subject = "Your Meal plan is Expired";
+                        string body = $"Hello {user.FirstName},\n\n" +
+                          "We hope this message finds you well. We are writing to inform you that your meal plan has expired.\n\n" +
+                          "To continue enjoying our meal services without any interruption, please renew your meal plan at your earliest convenience.\n\n" +
+                          "If you have any questions or need assistance with the renewal process, feel free to contact our support team.\n\n" +
+                          "Thank you for choosing our services.\n\n" +
+                          "Best regards,\n" +
+                          "The Meal Service Team";
+                        var emailModel = new EmailModel(user.Email, subject, body);
+                        _emailRepository.SendEmail(emailModel);
+
                         return Ok(new { allowAccess = allowedAccessnew });
 
                     }
@@ -124,9 +140,7 @@ namespace MealApp.Controllers
                         var emailModel = new EmailModel(user.Email, subject, body);
                         _emailRepository.SendEmail(emailModel);
 
-                        user.RenewalMailSentDate = Today;
-                        _authContext.SaveChanges();
-
+                       
 
                         //send notification to reminde about low access
                         var notification = new Notification
@@ -136,6 +150,10 @@ namespace MealApp.Controllers
                             CreatedAt = DateTime.Now
                         };
                         await _NotificationRepository.AddNotificationAsync(notification);
+
+                        user.RenewalMailSentDate = Today;
+                        _authContext.SaveChanges();
+
                         return Ok(new { allowAccess = allowedAccessnew });
 
                     }
