@@ -59,14 +59,15 @@ namespace MealApp.Controllers
             string email = allowedAccessDTO.Email;
             //DateTime tomorrow = DateTime.Now.AddDays(1);
             DateTime Today = DateTime.Now;
-           // DateTime Today = DateTime.Now.AddDays(6);
+            // DateTime Today = DateTime.Now.AddDays(6);
 
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
             int allowedAccess = user.AllowedAccess;
-                                                             // used to find no. of weekend days in between today and till access days
-                                                               // which will be add to calculate final end date
-                                                               // to provide proper access duration
-           
+
+            // used to find no. of weekend days in between today and till access days
+            // which will be add to calculate final end date
+            // to provide proper access duration
+
             int i = allowedAccess;
             DateTime CurrDate = Today;
             while (0 < i)
@@ -87,66 +88,72 @@ namespace MealApp.Controllers
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
             int bookeddays = BookingRepository.CountBookings(user.Id, Today);  //count booked days from today to access day
-                                                                                       
+
             user.BookingDays = bookeddays;
             UserRepository.Update(user);              // strored booked days
 
             int allowedAccessnew = UserRepository.UpdateAllowedAccess(user.Id, bookeddays, credits);
             // this will return and update in database allowedaccess
-         
-            if (allowedAccessnew < 3 && allowedAccessnew >0)
-            {               
-                    //send notification to reminde about low access
-                    var notification = new Notification
-                    {
-                        UserId = user.Id,
-                        Description = "Reminder: " + $"Only {allowedAccessnew} coupons are left.",
-                        CreatedAt = DateTime.Now
-                    };
-                    await _NotificationRepository.AddNotificationAsync(notification);
 
-
-                
-                // Send reminder for renewal of meal email
-                string from = _configration["emailsettings:from"];
-                string subject = "Reminder of Meal Renewal";
-                string body = $"Hello {user.FirstName},\n\nI hope this message finds you well. We are writing to remind you that the deadline for renewing your meal plan is fast approaching. " +
-                    $"\n\n The current meal plan will expire in {user.AllowedAccess} days, and we want to ensure there is no interruption in your meal services.";
-                var emailModel = new EmailModel(user.Email, subject, body);
-                _emailRepository.SendEmail(emailModel);
-
-
-            }
-
-            if (allowedAccessnew > 0)
+            if (allowedAccessnew < 3 && allowedAccessnew >= 0)
             {
-                return Ok(new { allowAccess = allowedAccessnew });         // from here only allowedaccess is passed
-                                                                           // and frontend will enable that no. of days from 
-                                                                           // today from frontend
-            }
 
-            if(allowedAccess == 0)
-            {
-                var notification = new Notification
+                DateTime? lastsentmail = user.RenewalMailSentDate;
+                // if mail not send befor or not sent today then send it and update date of today(once in a day)
+                if (lastsentmail == null || lastsentmail.Value.Date != Today.Date)
                 {
-                    UserId = user.Id,
-                    Description = "Expired: " + "Please renew the Meal.",
-                    CreatedAt = DateTime.Now
-                };
-               await _NotificationRepository.AddNotificationAsync(notification);
-                return Ok(new { allowAccess = allowedAccessnew });
+                    if (allowedAccess == 0)
+                    {
+                        var notification = new Notification
+                        {
+                            UserId = user.Id,
+                            Description = "Expired: " + "Please renew the Meal.",
+                            CreatedAt = DateTime.Now
+                        };
+                        await _NotificationRepository.AddNotificationAsync(notification);
+                        return Ok(new { allowAccess = allowedAccessnew });
 
+                    }
+                    else
+                    {
+                        // Send reminder for renewal of meal email
+                        string from = _configration["emailsettings:from"];
+                        string subject = "Reminder of Meal Renewal";
+                        string body = $"Hello {user.FirstName},\n\nI hope this message finds you well. We are writing to remind you that the deadline for renewing your meal plan is fast approaching. " +
+                            $"\n\n The current meal plan will expire in {user.AllowedAccess} days, and we want to ensure there is no interruption in your meal services.";
+                        var emailModel = new EmailModel(user.Email, subject, body);
+                        _emailRepository.SendEmail(emailModel);
+
+                        user.RenewalMailSentDate = Today;
+                        _authContext.SaveChanges();
+
+
+                        //send notification to reminde about low access
+                        var notification = new Notification
+                        {
+                            UserId = user.Id,
+                            Description = "Reminder: " + $"Only {allowedAccessnew} coupons are left.",
+                            CreatedAt = DateTime.Now
+                        };
+                        await _NotificationRepository.AddNotificationAsync(notification);
+                        return Ok(new { allowAccess = allowedAccessnew });
+
+                    }
+
+                }
+                return Ok(new { allowAccess = allowedAccessnew });
+            }
+            else
+            {
+                return Ok(new { allowAccess = allowedAccessnew });
             }
 
-
-
-            return NotFound(new { Message = "User not found or no allowed access" });
+            
         }
 
 
-
-        // POST: pageload/getcredits and selected date booking status
-        [HttpPost("Credits_and_bookingstatus")]
+            // POST: pageload/getcredits and selected date booking status
+            [HttpPost("Credits_and_bookingstatus")]
         public async Task<IActionResult> Credits([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
             string email = allowedAccessDTO.Email;

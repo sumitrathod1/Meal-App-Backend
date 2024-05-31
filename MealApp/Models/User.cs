@@ -21,5 +21,7 @@ namespace MealApp.Models
         public int Credits { get; set; } = 0;
 
         public int BookingDays { get; set;} = 0;
+
+        public DateTime? RenewalMailSentDate { get; set; }
     }
 }

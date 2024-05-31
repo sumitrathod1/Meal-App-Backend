@@ -35,7 +35,7 @@ namespace MealApp.Controllers
             return Ok(_NotificationRepository.FindNotification(userid));
         }
 
-        [HttpPost("DeleteNotificationByIndex")]
+        [HttpDelete("DeleteNotificationByIndex")]
         // delete notification by index
         public async Task<IActionResult> DeleteNotification(NotificationDTO notificationDTO)
         {
@@ -61,7 +61,9 @@ namespace MealApp.Controllers
         {
             string email = notificationDTO.Email;
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+
             var count = await _NotificationRepository.CountNotificationsByUserIdAsync(user.Id);
+         
             return Ok(new { notificationCount = count });
         }
 

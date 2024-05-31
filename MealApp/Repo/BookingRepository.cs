@@ -190,5 +190,7 @@ namespace MealApp.Repo
         {
             return await context.Bookings.FirstOrDefaultAsync(x => x.UserId == userId);
         }
+
+
     }
 }

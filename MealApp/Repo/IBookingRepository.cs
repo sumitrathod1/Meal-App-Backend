@@ -17,6 +17,8 @@ namespace MealApp.Repo
         List<DateTime> FindBookingDates(int UserId);
 
         Task<bool> IsBookedAsync(string email,DateTime selecteddate);
+
+      
         int CountBookings(int id, DateTime today);
         Task<List<Booking>> ExistingBookingsAsync(int userId, Models.Type bookingType, DateTime startDate, DateTime endDate);
 

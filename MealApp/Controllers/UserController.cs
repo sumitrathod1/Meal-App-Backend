@@ -144,53 +144,7 @@ namespace MealApp.Controllers
             return jwtTokenHandler.WriteToken(token);
         }
 
-        [Authorize]
-        [HttpGet]
-        public async Task<ActionResult<User>> GetAllUser()
-        {
-            return Ok(await _authContext.Users.ToListAsync());
-        }
 
-        ////[HttpPost("send-reset-email/{email}")]
-        ////public async Task<IActionResult> SendEmail(string email)
-        ////{
-        ////    var user = await _authContext.Users.FirstOrDefaultAsync(a => a.Email == email);
-        ////    if (user is null)
-        ////    {
-        ////        return NotFound(new
-        ////        {
-        ////            StatusCode = 404,
-        ////            Message = "Email doesn't exist"
-        ////        });
-        ////    }
-
-        ////    var token = Guid.NewGuid().ToString("N"); // Generate unique token
-        ////    user.ResetPasswordToken = token;
-        ////    user.RestPAsswordExpiry = DateTime.UtcNow.AddMinutes(15); // Use UTC time
-
-        ////    try
-        ////    {
-        ////        string from = _configration["EmailSettings:From"];
-        ////        var emailModel = new EmailModel(email, "Reset Password", EmailBody.EmailStringBody(email, token));
-        ////        _emailService.SendEmail(emailModel); // Ensure EmailService is implemented correctly
-        ////        await _authContext.SaveChangesAsync();
-
-        ////        return Ok(new
-        ////        {
-        ////            StatusCode = 200,
-        ////            Message = "Email Sent!"
-        ////        });
-        ////    }
-        ////    catch (Exception ex)
-        ////    {
-        ////        // Log the exception
-        ////        return StatusCode(500, new
-        ////        {
-        ////            StatusCode = 500,
-        ////            Message = $"Internal Server Error : {ex.Message}"
-        ////        });
-        ////    }
-        ////}
 
 
         [HttpPost("send-reset-email/{email}")]
@@ -297,7 +251,25 @@ namespace MealApp.Controllers
             // Save changes to the database.
             await _authContext.SaveChangesAsync();
 
-               return Ok(new
+
+            // Send reminder for renewal of meal email
+            string from = _configration["emailsettings:from"];
+            string subject = "Reminder of Meal Renewal";
+            string body = $"Hello {user.FirstName},\n\n" +
+               "We wanted to let you know that your password has been changed successfully.\n\n" +
+               "If you did not make this change, please contact our support team immediately to secure your account.\n\n" +
+               "If you have any questions or need further assistance, feel free to reach out to us.\n\n" +
+               "Thank you for using our services.\n\n" +
+               "Best regards,\n" +
+               "Rishabh Software";
+            var emailModel = new EmailModel(user.Email, subject, body);
+            _emailRepository.SendEmail(emailModel);
+
+           
+           
+
+
+            return Ok(new
                {
                    StatusCode = 200,
                    Message = "Password reset successfully"
