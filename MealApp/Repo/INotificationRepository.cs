@@ -6,9 +6,11 @@ namespace MealApp.Repo
     {
 
       Task<Notification> AddNotificationAsync(Notification notification);
-        public List<Notification> FindNotification(int UserId);
+        public List<string> FindNotification(int UserId);
 
         public Task DeleteNotificationsByUserIdAsync(int userId);
+
+        public Task<int> FindandDeleteNotificationByindex(int userid, int index);
 
         Task<int> CountNotificationsByUserIdAsync(int userId);
     }

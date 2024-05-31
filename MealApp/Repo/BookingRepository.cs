@@ -56,7 +56,7 @@ namespace MealApp.Repo
 
             int userId = user.Id;
             var booking = await context.Bookings
-                .FirstOrDefaultAsync(y => y.UserId == userId && y.Date.Date == selecteddate.Date); // Compare only the date part
+                .FirstOrDefaultAsync(y => y.UserId == userId && y.Date.Date == selecteddate.Date && y.Status == Status.Booked); // Compare only the date part
 
             if (booking != null && booking.Status == Status.Booked)
             {
@@ -90,10 +90,10 @@ namespace MealApp.Repo
 
 
         //gives booked days from today to allowedaccess
-        public int CountBookings(int UserId, DateTime StartDate, DateTime EndDate)
+        public int CountBookings(int UserId, DateTime StartDate)
         {
 
-            return context.Bookings.Count(booking => booking.UserId == UserId && booking.Date >= StartDate && booking.Date <= EndDate && booking.Status== Status.Booked);
+            return context.Bookings.Count(booking => booking.UserId == UserId && booking.Date >= StartDate && booking.Status== Status.Booked);
         }
 
 

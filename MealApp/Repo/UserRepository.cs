@@ -90,7 +90,7 @@ namespace MealApp.Repo
             var user = context.Bookings.Where(x => x.UserId == userid &&
                  x.Date.Year == selecteddate.Year &&
                  x.Date.Month == selecteddate.Month &&
-                 x.Date.Day == selecteddate.Day).FirstOrDefault();
+                 x.Date.Day == selecteddate.Day && x.Status== Status.Booked).FirstOrDefault();
           
            
 

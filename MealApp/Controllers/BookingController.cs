@@ -86,7 +86,7 @@ namespace MealApp.Controllers
             DateTime enddate = CurrDate;// add weekends in end_date
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
-            int bookeddays = BookingRepository.CountBookings(user.Id, Today, enddate);  //count booked days from today to access day
+            int bookeddays = BookingRepository.CountBookings(user.Id, Today);  //count booked days from today to access day
                                                                                        
             user.BookingDays = bookeddays;
             UserRepository.Update(user);              // strored booked days
@@ -103,9 +103,17 @@ namespace MealApp.Controllers
                         Description = "Reminder: " + $"Only {allowedAccessnew} coupons are left.",
                         CreatedAt = DateTime.Now
                     };
-                    await _NotificationRepository.AddNotificationAsync(notification);  
+                    await _NotificationRepository.AddNotificationAsync(notification);
+
+
                 
-                // send email
+                // Send reminder for renewal of meal email
+                string from = _configration["emailsettings:from"];
+                string subject = "Reminder of Meal Renewal";
+                string body = $"Hello {user.FirstName},\n\nI hope this message finds you well. We are writing to remind you that the deadline for renewing your meal plan is fast approaching. " +
+                    $"\n\n The current meal plan will expire in {user.AllowedAccess} days, and we want to ensure there is no interruption in your meal services.";
+                var emailModel = new EmailModel(user.Email, subject, body);
+                _emailRepository.SendEmail(emailModel);
 
 
             }
@@ -213,16 +221,32 @@ namespace MealApp.Controllers
             }
 
 
+            bool hasWeekend = true;
+            bool weekdays = true; 
 
             int RequestedBookings = 0;
             for (DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate= CurrDate.AddDays(1))
             {
                 if (CurrDate.DayOfWeek != DayOfWeek.Saturday && CurrDate.DayOfWeek != DayOfWeek.Sunday)
                 {
+                    weekdays = false;
                     RequestedBookings++;
-                }
 
+                }
+                else
+                {
+                    hasWeekend = true;
+                                               // if any one weekdays come then false will go
+                }
+               
             }
+
+            bool hasAllWeekends = hasWeekend && weekdays; //used to check that all days between startdate and end date id weekend or not
+            if(hasAllWeekends) // all are weekends 
+            {
+                return BadRequest(new { Message = "Please select Weekdays" });
+            }
+
             if (RequestedBookings > Credits) {
                 return BadRequest(new { Message = "RequestedBooking > Credits" });
             }
@@ -262,9 +286,9 @@ namespace MealApp.Controllers
            
             if(StartDate.DayOfWeek == DayOfWeek.Sunday) { StartDate = StartDate.AddDays(1); }
 
-            if(EndDate.DayOfWeek == DayOfWeek.Saturday) { EndDate = EndDate.AddDays(2); }
+            if(EndDate.DayOfWeek == DayOfWeek.Saturday) { EndDate = EndDate.AddDays(-1); }
 
-            if(EndDate.DayOfWeek == DayOfWeek.Sunday) { EndDate = EndDate.AddDays(1); }
+            if(EndDate.DayOfWeek == DayOfWeek.Sunday) { EndDate = EndDate.AddDays(-2); }
 
             // Create and save notification
             var notification = new Notification

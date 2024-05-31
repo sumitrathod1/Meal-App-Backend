@@ -4,6 +4,6 @@
     {
         public string Email { get; set; }
 
-        public string Description { get; set; }
+        public int Index { get; set; }
     }
 }

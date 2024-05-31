@@ -35,32 +35,25 @@ namespace MealApp.Controllers
             return Ok(_NotificationRepository.FindNotification(userid));
         }
 
-        //[HttpPost]
-        // delete notification by NID
-        //public async Task<IActionResult> DeleteNotification(NotificationDTO notificationDTO)
-        //{
-        //    string email = notificationDTO.Email;
-        //    string message = notificationDTO.Description;
-        //    var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
-        //    int userid = user.Id;
+        [HttpPost("DeleteNotificationByIndex")]
+        // delete notification by index
+        public async Task<IActionResult> DeleteNotification(NotificationDTO notificationDTO)
+        {
+            string email = notificationDTO.Email;
+            int index = notificationDTO.Index;
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+            int userid = user.Id;
 
-        //    FindNotificationId(userid,message);
-        //    return Ok(_NotificationRepository.FindNotification(userid));
-        //}
+            int a = await _NotificationRepository.FindandDeleteNotificationByindex(userid, index);
+            if (a == -1)
+            {
+                return BadRequest(new { message = "Selected notification does not exist." });
+            }
+
+            return Ok(new { message = "Notification deleted successfully." });
+        }
 
 
-
-        // DELETE api/<NotificationController>/5
-        // delete by userid 
-        // on clear all notifications
-
-        //[HttpDelete]    // i need when user click on notification messages goes in backend
-        //[HttpDelete("DeleteNotificationsByUserId/{userId}")]
-        //public async Task<IActionResult> DeleteNotificationsByUserId(int userId)
-        //{
-        //    await _NotificationRepository.DeleteNotificationsByUserIdAsync(userId);
-        //    return Ok(new { message = "All Notifications deleted successfully." });
-        //}
 
         // count of notification of specific user 
         [HttpPost("Count_notifications")]
