@@ -21,7 +21,7 @@ namespace MealApp.Helpers
   
           <a href=""http://localhost:4200/reset?email={email}&code={emailToken}"" target=""_blank"" style=""background:#0d6efd;padding:10px;border:none; color:white; border-radius:4px;display:block;margin:0 auto;width:50;text-align:center:text-descoration:none"">reaset Password</a><br>
   
-          <p>Kind regards, <br><br> Meal App</p>
+          <p>Kind regards, <br><br>RISE MEAL FACILITY</p>
         </div>
       </div>
     </div>

@@ -51,7 +51,7 @@ namespace MealApp.Controllers
             DateTime expirationTime;   // fixed for lunch and dinner
 
             // check booking of this time (lunch or dinner) is booked or not
-             if(currentDate.Hour > 12 && currentDate.Hour <14)
+             if(currentDate.Hour >= 0 && currentDate.Hour <2)
             {
                 //check for lunch booked or not
                 var booking = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Lunch && x.Status == Status.Booked && x.Date.Date == currentDate.Date);
@@ -66,10 +66,10 @@ namespace MealApp.Controllers
                     return BadRequest(new { message = "Coupon for today's Lunch is Aquired!" });
                 }
 
-                 expirationTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 14, 0, 0);  //expiredtime is fixed
+                 expirationTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 1, 0, 0);  //expiredtime is fixed
 
             }
-            else if (currentDate.Hour > 20 && currentDate.Hour < 22)  // check for dinner
+            else if (currentDate.Hour >= 20 && currentDate.Hour < 22)  // check for dinner
             {
                 //check for lunch booked or not
                 var booking = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Dinner && x.Status == Status.Booked && x.Date.Date == currentDate.Date);
@@ -127,26 +127,18 @@ namespace MealApp.Controllers
         [HttpPost("ValidateCouponCode")]
         public async Task<IActionResult> ValidateCouponCode([FromBody] CouponValidationDTO couponValidationDTO)
         {
-            string email = couponValidationDTO.Email;
+          //  string email = couponValidationDTO.Email;
             string couponCode = couponValidationDTO.CouponCode;
             DateTime today = DateTime.Now;
 
-            //find user based on email
-            var user = await _authContext.Users.FirstOrDefaultAsync(x=> x.Email == email);
-            if (user == null)
-            {
-                return NotFound(new { message = "User not found" });
-            }
-
-            int userId = user.Id;
-            //find the object where userid matched in coupon table
-            var couponobj = await _authContext.coupons.FirstOrDefaultAsync(y => y.UserId == userId);
-            
-
-            if (couponobj == null || couponobj.CouponCode != couponCode)
+            //find user based on coupon
+            var coupon = await _authContext.coupons.FirstOrDefaultAsync(x=> x.CouponCode == couponCode);
+            if(coupon == null)
             {
                 return BadRequest(new { message = "Invalid coupon code" });
             }
+            int userId = coupon.UserId;
+
 
             var bookingobj = await _bookingRepository.GetBookingStatusByUserIdAsync(userId);
            
@@ -169,7 +161,7 @@ namespace MealApp.Controllers
             // change status of user booked to used on todays date 
             await _bookingRepository.ChangeBookingStatusAsync(userId , today);
 
-            await _couponRepository.RemoveCouponAsync(couponobj);
+            await _couponRepository.RemoveCouponAsync(coupon);
 
             return Ok(new { message = "Coupon code validated and booking status updated" });
             // can add one sound in angular like thank you

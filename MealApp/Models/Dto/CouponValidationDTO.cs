@@ -4,7 +4,7 @@
     {
 
         
-            public string Email { get; set; }
+           
             public string CouponCode { get; set; }
         
     }

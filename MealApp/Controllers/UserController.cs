@@ -391,7 +391,7 @@ namespace MealApp.Controllers
             string Fname = user.FirstName;
             DateTime cuurdate = DateTime.Now;
 
-            if (cuurdate.Hour > 12 && cuurdate.Hour < 16)  // feedback is allowed for lunch 12pm to 6pm
+            if (cuurdate.Hour > 12 && cuurdate.Hour < 19)  // feedback is allowed for lunch 12pm to 6pm
             {
                 if(mealtype == "Dinner")              // time for lunch only
                 {
