@@ -16,6 +16,6 @@ namespace MealApp.Models.Dto
 
 
         [Required]
-        public String Type { get; set; }
+        public string Type { get; set; }
     }
 }

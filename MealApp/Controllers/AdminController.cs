@@ -1,6 +1,8 @@
 ﻿using MealApp.Context;
 using MealApp.Models.Dto;
+using MealApp.Repo;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -11,39 +13,55 @@ namespace MealApp.Controllers
     public class AdminController : ControllerBase
     {
 
-        private readonly AppDbContext dbContext;
+        private readonly AppDbContext _dbContext;
 
-        // GET: api/<AdminController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        public AdminController(AppDbContext dbContext)
         {
-            return new string[] { "value1", "value2" };
+            _dbContext = dbContext;
+           
         }
 
-        // GET api/<AdminController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
+
 
         // POST api/<AdminController>
-        [HttpPost]
-        public void Post([FromBody] AdminDTO adminDTO)
+        [HttpPost("Setcredits")]
+        public async Task<IActionResult> GiveCredits ([FromBody] AdminDTO adminDTO)
         {
+            int credits = adminDTO.Credits;
+            string email = adminDTO.Email;
+
+            
+            var user = await _dbContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+            if(user == null)
+            {
+                return BadRequest(new { Message = "User not found!" });      // if email is not matched
+            }
+
+            if(credits <= 0)
+            {
+                return BadRequest(new { Message = "Please enter valid Credits!" });   //credits are not negitive
+            }
+            int ReservedCredits = user.Credits;
+            int OldAllowedAccess = user.AllowedAccess;
+
+           int NewCredits = ReservedCredits + credits;                      //update credits 
+            int NewAllowedAccess = OldAllowedAccess + credits;              // update allowedaccess also
+           
+            if(NewAllowedAccess > 66)          // prevent user to get access more then 3 Months
+            { 
+                return BadRequest(new { Message = " Not valid ! , User exceed the limit of 3 Months." });   //credits are not negitive
+
+            }
+            user.Credits = NewCredits; 
+            user.AllowedAccess = NewAllowedAccess;
+          
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new { Message = "Credits Set successfully" });
 
         }
 
-        // PUT api/<AdminController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/<AdminController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
+       
     }
 }

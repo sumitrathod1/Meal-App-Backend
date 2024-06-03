@@ -38,6 +38,24 @@ namespace MealApp.Controllers
             _userRepository = userRepository;
         }
 
+        [HttpPost("getfirstname")]
+        public async Task<IActionResult> firstname([FromBody] User userObj)
+        {
+            if (userObj == null)
+                return BadRequest();
+
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == userObj.Username);
+
+            if (user == null)
+                return NotFound(new { message = "User Not Found!" });
+
+            string firstname = user.FirstName;
+            return Ok(new
+            {
+                name = firstname
+            }) ;
+            }
+
         [HttpPost("authenticate")]
 
         public async Task<IActionResult> Authenticate([FromBody] User userObj)
@@ -344,6 +362,129 @@ namespace MealApp.Controllers
 
             return Ok(new  { Message = "Email sent...Suppoert Team will shortly contect you or gives attention on this."  });
 
+
+        }
+
+
+        //send data in feedback
+        [HttpPost("feedback")]
+        public async Task<IActionResult> givefeedback([FromBody] FeedbackDTO feedbackDTO)
+        {
+            if (feedbackDTO == null)
+                return BadRequest();
+
+
+            string mealtype = feedbackDTO.MealType;
+            string message = feedbackDTO.Message;
+            int rating = feedbackDTO.Rating;
+            string email = feedbackDTO.Email;
+
+
+
+            var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
+            if(user == null)
+            {
+                return BadRequest(new { Message = "user not found!." });
+            }
+
+            int userid = user.Id;
+            string Fname = user.FirstName;
+            DateTime cuurdate = DateTime.Now;
+
+            if (cuurdate.Hour > 12 && cuurdate.Hour < 16)  // feedback is allowed for lunch 12pm to 6pm
+            {
+                if(mealtype == "Dinner")              // time for lunch only
+                {
+                    return BadRequest(new { Message = "Feedback form is closed now for Dinner." });
+
+                }
+                //check for todays lunch is booked  ////////////////////////////////
+                bool todaysLunch = await _userRepository.IstodaysLunchAquired(userid, cuurdate);
+
+                if (todaysLunch)           //  aquired or not 
+                {
+                    // check to give only one feedback for day and for meal type
+                    bool todayslunchfeedback = await _userRepository.IsLunchFeedbackstored(userid, cuurdate);
+
+                    if (todayslunchfeedback)    // once given then return
+                    {
+                        return BadRequest(new { Message = "Your Feedback is stored Once." });
+                    }
+
+
+                    // then allowed to give feedback
+                    var feedback = new Feedback
+                    {
+                        UserId = userid,
+                        Rating = rating,
+                        FeedbackTimeStamp = cuurdate,
+                        FirstName = Fname,
+                        Message = message,
+                        MealType = mealtype,
+
+                    };
+                    _authContext.feedbacks.Add(feedback);
+                    await _authContext.SaveChangesAsync();
+
+                    return Ok(new { Message = "Thank You for Your Valueable Feedback" });
+
+                }
+                else
+                {
+                    return BadRequest(new { Message = "Sorry!...You have not Readeem Todays Lunch." });
+
+                }
+                }
+            else if (cuurdate.Hour > 20 && cuurdate.Hour < 24)  // feedback is allowed for dinner 8pm to 12am
+              {
+                if (mealtype == "Dinner")              // time for dinner only
+                    {
+                    return BadRequest(new { Message = "Feedback form is closed now for Dinner." });
+
+                    }
+                    //check for todays lunch is booked  ////////////////////////////////
+                bool todaysDinner = await _userRepository.IstodaysDinnerAquired(userid, cuurdate);
+
+                if (todaysDinner)
+                    {
+
+                    // check to give only one feedback for day and for meal type
+                    bool todaysdinnerfeedback = await _userRepository.IsDinnerFeedbackstored(userid, cuurdate);
+
+                    if (todaysdinnerfeedback)    // once given then return
+                    {
+                        return BadRequest(new { Message = "Your Feedback is stored Once." });
+                    }
+
+                    // then allowed to give feedback
+                    var feedback = new Feedback
+                        {
+                        UserId = userid,
+                        Rating = rating,
+                        FeedbackTimeStamp = cuurdate,
+                        FirstName = Fname,
+                        Message = message,
+                        MealType = mealtype,
+
+                         };
+                     _authContext.feedbacks.Add(feedback);
+                     await _authContext.SaveChangesAsync();
+
+                     return Ok(new { Message = "Thank You for Your Valueable Feedback" });
+
+                 }
+                 else
+                 {
+                    return BadRequest(new { Message = "Sorry!...You have not Readeem Todays Dinner." });
+
+                 }
+
+            } 
+            else
+            {
+                return BadRequest(new { Message = "Sorry!...Feedback form is closed now. It will open between 12pm to 4pm for lunch and open for dinner between 8pm to 12am" });
+
+            }
 
         }
     }

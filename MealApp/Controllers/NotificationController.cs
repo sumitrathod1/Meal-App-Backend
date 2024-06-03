@@ -61,7 +61,10 @@ namespace MealApp.Controllers
         {
             string email = notificationDTO.Email;
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
-
+            if(user == null)
+            {
+                return Ok(new { notificationCount = 0 });
+            }
             var count = await _NotificationRepository.CountNotificationsByUserIdAsync(user.Id);
          
             return Ok(new { notificationCount = count });

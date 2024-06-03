@@ -19,6 +19,8 @@ namespace MealApp.Context
 
         public DbSet<Contect> contects { get;set;}
 
+        public DbSet<Feedback> feedbacks { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>().ToTable("users");
@@ -26,6 +28,7 @@ namespace MealApp.Context
             modelBuilder.Entity<Notification>().ToTable("notification");
             modelBuilder.Entity<Coupon>().ToTable("coupon");
             modelBuilder.Entity<Contect>().ToTable("contect");
+            modelBuilder.Entity<Feedback>().ToTable("feedback");
         }
         
     }

@@ -46,8 +46,51 @@ namespace MealApp.Controllers
             int userId = user.Id;
             string username = user.Username;
             string Name = user.FirstName;
+            
             DateTime currentDate = DateTime.Now;
-            DateTime expirationTime = currentDate.AddMinutes(4);
+            DateTime expirationTime;   // fixed for lunch and dinner
+
+            // check booking of this time (lunch or dinner) is booked or not
+             if(currentDate.Hour > 12 && currentDate.Hour <14)
+            {
+                //check for lunch booked or not
+                var booking = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Lunch && x.Status == Status.Booked && x.Date.Date == currentDate.Date);
+                if (booking == null)
+                {
+                    return BadRequest(new { message = "Booking for Lunch is not found!" });
+                }
+                // fatched satus of lunch on today
+                var booking1 = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Lunch  && x.Date.Date == currentDate.Date);
+                if(booking1.Status == Status.Used)
+                {
+                    return BadRequest(new { message = "Coupon for today's Lunch is Aquired!" });
+                }
+
+                 expirationTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 14, 0, 0);  //expiredtime is fixed
+
+            }
+            else if (currentDate.Hour > 20 && currentDate.Hour < 22)  // check for dinner
+            {
+                //check for lunch booked or not
+                var booking = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Dinner && x.Status == Status.Booked && x.Date.Date == currentDate.Date);
+                if (booking == null)
+                {
+                    return BadRequest(new { message = "Booking for Dinner is not found!" });
+                }
+                // fatched satus of dinner on today
+                var booking1 = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Dinner && x.Date.Date == currentDate.Date);
+                if (booking1.Status == Status.Used)
+                {
+                    return BadRequest(new { message = "Coupon for today's Dinner is Aquired!" });
+                }
+
+                 expirationTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 22, 0, 0);    //expiredtime is fixed
+            }
+            else
+            {
+                return BadRequest(new { message = "this is not right time to take lunch or dinner, Please come on time" });
+
+            }
 
             // Check if a coupon for this user exists
             var Couponobj = await _authContext.coupons.FirstOrDefaultAsync(c => c.UserId == userId);

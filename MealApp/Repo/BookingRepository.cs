@@ -58,9 +58,42 @@ namespace MealApp.Repo
             var booking = await context.Bookings
                 .FirstOrDefaultAsync(y => y.UserId == userId && y.Date.Date == selecteddate.Date && y.Status == Status.Booked); // Compare only the date part
 
-            if (booking != null && booking.Status == Status.Booked)
+            if (booking != null)
             {
-                return true;
+                return true;                      //    Lunch or dinner booked for selected date
+            }
+
+            return false;
+        }
+
+       
+        
+
+        public async Task<bool> GetAquiredStatusLunch(int userid)
+        {
+           DateTime today = DateTime.Today;
+            var booking = await context.Bookings
+                .FirstOrDefaultAsync(y => y.UserId == userid && y.Date.Date == today.Date && y.Status == Status.Used); // Compare only the date part
+
+ 
+            if (booking != null && booking.Type == Models.Type.Lunch)
+            {
+                return true;           // lunch aquired.
+            }
+            
+            return false;
+        }
+
+        public async Task<bool> GetAquiredStatusDinner(int userid)
+        {
+            DateTime today = DateTime.Today;
+            var booking = await context.Bookings
+                .FirstOrDefaultAsync(y => y.UserId == userid && y.Date.Date == today.Date && y.Status == Status.Used); // Compare only the date part
+
+
+            if (booking != null && booking.Type == Models.Type.Dinner)
+            {
+                return true;           // dinner aquired.
             }
 
             return false;
@@ -84,17 +117,32 @@ namespace MealApp.Repo
         public async Task<List<Booking>> ExistingBookingsAsync(int userId, Models.Type bookingType, DateTime startDate, DateTime endDate)
         {
             return await context.Bookings
-                .Where(b => b.UserId == userId && b.Type == bookingType && b.Status == Status.Booked && b.Date >= startDate && b.Date <= endDate)
+                .Where(b => b.UserId == userId &&  b.Status == Status.Booked && b.Date >= startDate && b.Date <= endDate)
                 .ToListAsync();
-        }
+        }   // b.Type == bookingType => is not used because this method returns all booked rows
 
 
-        //gives booked days from today to allowedaccess
+        //gives booked days from today 
         public int CountBookings(int UserId, DateTime StartDate)
         {
 
             return context.Bookings.Count(booking => booking.UserId == UserId && booking.Date >= StartDate && booking.Status== Status.Booked);
         }
+
+        public int GetDualBooking(int UserId, DateTime StartDate)
+        {
+                                                                // returns the no. of days where lunch and dinner both booked
+            var dualBookingDays = context.Bookings
+                .Where(booking => booking.UserId == UserId
+                               && booking.Date >= StartDate
+                               && booking.Status == Status.Booked)
+                .GroupBy(booking => new { booking.UserId, booking.Date })
+                .Where(g => g.Select(b => b.Type).Distinct().Count() > 1)
+                .Count();
+
+            return dualBookingDays;
+        }
+
 
 
 

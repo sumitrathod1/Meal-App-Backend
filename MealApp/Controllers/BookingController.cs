@@ -1,4 +1,5 @@
 ﻿using MealApp.Context;
+using MealApp.Helpers;
 using MealApp.Migrations;
 using MealApp.Models;
 using MealApp.Models.Dto;
@@ -52,7 +53,7 @@ namespace MealApp.Controllers
 
 
 
-        // POST: pageload/getallowedaccess
+        // POST: pageload/getallowedaccess and isredeemstatus
         [HttpPost("Allowedaccess")]
         public async Task<IActionResult> Allowedaccess([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
@@ -63,7 +64,11 @@ namespace MealApp.Controllers
 
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == email);
             int allowedAccess = user.AllowedAccess;
+            Boolean isredeemLunch =await BookingRepository.GetAquiredStatusLunch(user.Id); // lunch aquired or not   //return todays meal is aquired or not
+            Boolean isredeemDinner =await BookingRepository.GetAquiredStatusDinner(user.Id); // dinner aquire or not
+            
 
+            
             // used to find no. of weekend days in between today and till access days
             // which will be add to calculate final end date
             // to provide proper access duration
@@ -81,10 +86,10 @@ namespace MealApp.Controllers
 
                 CurrDate = CurrDate.AddDays(1);
                 i--;
-            }
+            } 
 
 
-            DateTime enddate = CurrDate;// add weekends in end_date
+            DateTime enddate = CurrDate;// add weekends in end_date  // first i send enddate to count but not needed
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
             int bookeddays = BookingRepository.CountBookings(user.Id, Today);  //count booked days from today to access day
@@ -127,7 +132,7 @@ namespace MealApp.Controllers
                         var emailModel = new EmailModel(user.Email, subject, body);
                         _emailRepository.SendEmail(emailModel);
 
-                        return Ok(new { allowAccess = allowedAccessnew });
+                        return Ok(new { allowAccess = allowedAccessnew, IsredeemLunch = isredeemLunch, IsredeemDinner = isredeemDinner });
 
                     }
                     else
@@ -154,36 +159,37 @@ namespace MealApp.Controllers
                         user.RenewalMailSentDate = Today;
                         _authContext.SaveChanges();
 
-                        return Ok(new { allowAccess = allowedAccessnew });
+                        return Ok(new { allowAccess = allowedAccessnew, IsredeemLunch = isredeemLunch, IsredeemDinner = isredeemDinner });
 
                     }
 
                 }
-                return Ok(new { allowAccess = allowedAccessnew });
+                return Ok(new { allowAccess = allowedAccessnew, IsredeemLunch = isredeemLunch, IsredeemDinner = isredeemDinner });
             }
             else
             {
-                return Ok(new { allowAccess = allowedAccessnew });
+                return Ok(new { allowAccess = allowedAccessnew , IsredeemLunch = isredeemLunch, IsredeemDinner = isredeemDinner });
             }
-
+            
             
         }
 
 
-            // POST: pageload/getcredits and selected date booking status
-            [HttpPost("Credits_and_bookingstatus")]
+       // POST: pageload/getcredits and selected date booking status
+       [HttpPost("Credits_and_bookingstatus")]
         public async Task<IActionResult> Credits([FromBody] AllowedAccessDTO allowedAccessDTO)
         {
             string email = allowedAccessDTO.Email;
             DateTime selecteddate = allowedAccessDTO.SelectedDate;
 
             int credits = BookingRepository.FindDCreddits(email);  //method used from bookingrepo which return credits
-            Boolean isbooked = await BookingRepository.IsBookedAsync(email, selecteddate); // methos used fro checking user's today's booking
-
+            
+            Boolean isbooked = await BookingRepository.IsBookedAsync(email, selecteddate); // methos used fro checking user's selected dates's booking of lunch
+           
 
             if (credits >= 0)
             {
-                return Ok(new { credit = credits , todays_booking = isbooked});
+                return Ok(new { credit = credits , todays_booking = isbooked });
             }
 
            
@@ -199,6 +205,7 @@ namespace MealApp.Controllers
         {
             DateTime StartDate = bookingDTO.StartDate;
             DateTime EndDate= bookingDTO.EndDate;
+            string Bookingtype = bookingDTO.Type;
             DateTime Today= DateTime.Now;
 
             if(StartDate > EndDate)
@@ -213,14 +220,18 @@ namespace MealApp.Controllers
                 if (user == null)
                     return NotFound(new { message = "User Not Found!" });
             }
+
             Type BookingType = Type.Lunch;
-            if(bookingDTO.Type == "Lunch")
+
+            if (Bookingtype == "Lunch")
             {
-                BookingType= Type.Lunch;
-            }else if(bookingDTO.Type == "Dinner")
+                BookingType = Type.Lunch;
+            }
+            else if (Bookingtype == "Dinner")
             {
                 BookingType = Type.Dinner;
             }
+
             int UserId = user.Id;
            // int bookeddays = user.BookingDays;
 
@@ -233,7 +244,7 @@ namespace MealApp.Controllers
             List<DateTime> conflictingDates = new List<DateTime>();
             for (DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate = CurrDate.AddDays(1))
             {
-                if (existingBookings.Any(b => b.Date == CurrDate))
+                if (existingBookings.Any(b => b.Date == CurrDate && b.Type == BookingType))
                 {
                     conflictingDates.Add(CurrDate);
                 }
@@ -242,11 +253,13 @@ namespace MealApp.Controllers
             if (conflictingDates.Any())
             {
                 string conflictDatesMessage = string.Join(", ", conflictingDates.Select(d => d.ToString("yyyy-MM-dd")));
-                return BadRequest(new { Message = $"Booking for the following dates is already booked: {conflictDatesMessage}" });
+                string for_type = string.Join(", ", Bookingtype);
+                return BadRequest(new { Message = $"Booking for the following dates is already booked: {conflictDatesMessage} for {for_type}" });
+
             }
 
 
-            bool hasWeekend = true;
+            bool hasWeekend = true;        // used to hendal selected days are not only weekends
             bool weekdays = true; 
 
             int RequestedBookings = 0;
@@ -302,12 +315,12 @@ namespace MealApp.Controllers
 
             User user1 = UserRepository.UpdateCredits(UserId, RequestedBookings);
 
-          
-            int credits = user1.Credits; //    
+           
+            int credits = user1.Credits;            //    updated credit and bookeddays
             int bookedday = user1.BookingDays;
-            UserRepository.UpdateAllowedAccess(UserId, bookedday, credits);
+            UserRepository.UpdateAllowedAccess(UserId, bookedday, credits);        //this method first count dualbookingday
 
-            if(StartDate.DayOfWeek == DayOfWeek.Saturday) { StartDate = StartDate.AddDays(2); }
+            if (StartDate.DayOfWeek == DayOfWeek.Saturday) { StartDate = StartDate.AddDays(2); }
            
             if(StartDate.DayOfWeek == DayOfWeek.Sunday) { StartDate = StartDate.AddDays(1); }
 
@@ -320,17 +333,27 @@ namespace MealApp.Controllers
             {
                 UserId = UserId,
                 
-                Description = $"Your meal has been booked from {StartDate.ToString("MMMM dd, yyyy")} to {EndDate.ToString("MMMM dd, yyyy")}.",
+                Description = $"Your meal has been booked from {StartDate.ToString("MMMM dd, yyyy")} to {EndDate.ToString("MMMM dd, yyyy")} for {Bookingtype}",
                 CreatedAt = DateTime.Now
             };
             await _NotificationRepository.AddNotificationAsync(notification);
 
-            // Send confirmation email
+            // Send confirmation email to user
             string from = _configration["emailsettings:from"];
             string subject = "Booking Confirmation";
-            string body = $"Hello {user.FirstName},\n\nYour booking from {StartDate.ToString("MMMM dd, yyyy")} to {EndDate.ToString("MMMM dd, yyyy")} has been successfully created.\n\nBest regards,\nYour Rishabh Software";
+            string body = EmailBody.BookingConfirmationEmailBody(user.FirstName, StartDate.ToString("MMMM dd, yyyy"), EndDate.ToString("MMMM dd, yyyy"), Bookingtype);
             var emailModel = new EmailModel(user.Email, subject, body);
             _emailRepository.SendEmail(emailModel);
+
+
+            // Send confirmation email to admin  // admin : akshatjoshi2003@gmail.com
+            string to = "akshatjoshi2003@gmail.com";
+             from = _configration["emailsettings:from"];
+            string subject1 = $"Booking Confirmation of {user.FirstName}";
+            string body1 = EmailBody.BookingConfirmationEmailBodytoAdmin(user.FirstName, StartDate.ToString("MMMM dd, yyyy"), EndDate.ToString("MMMM dd, yyyy"), Bookingtype); 
+            var emailModel1 = new EmailModel(to, subject1, body1);
+            _emailRepository.SendEmail(emailModel1);
+
 
             // Save changes to the context after sending the email
             await _authContext.SaveChangesAsync();
@@ -361,26 +384,35 @@ namespace MealApp.Controllers
                 bookingDate = bookingDate.AddDays(1);
             }
 
+            string Bookingtype =qbookingDTO.Type;
+            Type BookingType = Type.Lunch;
+
+            if (Bookingtype == "Lunch")
+            {
+                BookingType = Type.Lunch;
+            }
+            else if (Bookingtype == "Dinner")
+            {
+                BookingType = Type.Dinner;
+            }
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == qbookingDTO.Email);
             if (user == null)
             {
                 return NotFound(new { message = "User Not Found!" });
             }
 
-            Type bookingType = Type.Lunch; // Default booking type
+
+             // Default booking type
             int userId = user.Id;
             int credits = user.Credits;
 
             // Check for existing booking on the target date
-            var existingBooking = await _authContext.Bookings.FirstOrDefaultAsync(x=>x.UserId == userId && x.Status == Status.Booked && x.Type== Type.Lunch && x.Date.Date == bookingDate.Date);
+            var existingBooking = await _authContext.Bookings.FirstOrDefaultAsync(x=>x.UserId == userId && x.Status == Status.Booked && x.Type== BookingType && x.Date.Date == bookingDate.Date);
              if(existingBooking != null)
             {
-                return BadRequest(new { Message = $"Booking for {bookingDate.ToString("yyyy-MM-dd")} is already booked." });
+                return BadRequest(new { Message = $"Booking for {bookingDate.ToString("yyyy-MM-dd")} is already booked for {qbookingDTO.Type}." });
 
             }
-
-
-
 
 
             if (credits < 1)
@@ -392,7 +424,7 @@ namespace MealApp.Controllers
             {
                 UserId = userId,
                 Date = bookingDate,
-                Type = bookingType,
+                Type = BookingType,
                 Status = Status.Booked
             };
             Booking savedBooking = BookingRepository.Add(newBooking);
@@ -411,17 +443,27 @@ namespace MealApp.Controllers
             var notification = new Notification
             {
                 UserId = userId,
-                Description = $"Your meal has been booked for {bookingDate.ToString("MMMM dd, yyyy")}.",
+                Description = $"Your meal has been booked for{Bookingtype} on {bookingDate.ToString("MMMM dd, yyyy")}.",
                 CreatedAt = DateTime.Now
             };
             await _NotificationRepository.AddNotificationAsync(notification);
 
-            ////// send confirmation email
+  
+            // Send confirmation email to user
             string from = _configration["emailsettings:from"];
             string subject = "Booking Confirmation";
+            string body = EmailBody.BookingConfirmationQuickEmailBody(user.FirstName, bookingDate.ToString("MMMM dd, yyyy"), Bookingtype);
+            var emailmodel = new EmailModel(user.Email, subject, body);
+            _emailRepository.SendEmail(emailmodel);
 
-            string body = $"hello {user.FirstName},\n\nyour booking for {bookingDate.ToString("mmmm dd, yyyy")} has been successfully created.\n\nbest regards,\nyour rishabh software"; var emailModel = new EmailModel(user.Email, subject, body);
-            _emailRepository.SendEmail(emailModel);
+
+            // Send confirmation email to admin  // admin : akshatjoshi2003@gmail.com
+            string to = "akshatjoshi2003@gmail.com";
+            from = _configration["emailsettings:from"];
+            string subject1 = $"Booking Confirmation of {user.FirstName}";
+            string body1 = EmailBody.BookingConfirmationQuickEmailBodytoAdmin(user.FirstName, bookingDate.ToString("MMMM dd, yyyy"), Bookingtype);
+            var emailModel1 = new EmailModel(to, subject1, body1);
+            _emailRepository.SendEmail(emailModel1);
 
             // Save changes to the context after sending the email
             await _authContext.SaveChangesAsync();
@@ -430,57 +472,41 @@ namespace MealApp.Controllers
         }
 
 
-        // put Booking/CancelBooking/email,date
-        // here id is booking id and it will come from userid and date 
 
-        //[HttpPut("CancelBooking")]
-        //public async Task<IActionResult> CancelBooking([FromBody] CancelBookingDTO cancelDTO)
-        //{
-        //    DateTime SelectedDate = cancelDTO.selecteddate;
-        //    string Email = cancelDTO.Email;
 
-        //    //this will find user id based on emailid
-
-        //    int userid = UserRepository.FindUserid(Email);
-
-        //    if (userid == -1)
-        //    {
-        //        NotFound(new { message = "User Not Found!" });
-        //    }
-
-        //    int bookingid = UserRepository.FindBookingid(userid, SelectedDate);
-
-        //    if (bookingid == -1)
-        //    {
-        //        NotFound(new { message = "booking is not for this day" });
-        //    }
-
-        //    Booking CancelledBooking=BookingRepository.CancelBooking(bookingid);
-
-        //    UserRepository.UpdateAllowedBooking(userid, +1);
-
-        //    return Ok(CancelledBooking);
-        //}
         [HttpPut("CancelBooking")]
         public async Task<IActionResult> CancelBooking([FromBody] CancelBookingDTO cancelDTO)
         {
             DateTime SelectedDate = cancelDTO.selecteddate;
             string Email = cancelDTO.Email;
+            string Bookingtype = cancelDTO.Type;
+
+            Type BookingType = Type.Lunch;
+
+            if (Bookingtype == "Lunch")
+            {
+                BookingType = Type.Lunch;
+            }
+            else if (Bookingtype == "Dinner")
+            {
+                BookingType = Type.Dinner;
+            }
+
             var user = await _authContext.Users.FirstOrDefaultAsync(x => x.Email == Email);
 
-            //this will find user id based on emailid
-            int userid = UserRepository.FindUserid(Email);
+            
+            int userid = user.Id;
 
             if (userid == -1)
             {
                 return NotFound(new { message = "User Not Found!" });
             }
 
-            int bookingid = UserRepository.FindBookingid(userid, SelectedDate);
+            int bookingid = UserRepository.FindBookingid(userid, SelectedDate, BookingType);
 
             if (bookingid == -1)
             {
-                return NotFound(new { message = "Booking is not for this day" });
+                return NotFound(new { message = $"No booking found for {Bookingtype} on this day" });
             }
 
             Booking CancelledBooking = BookingRepository.CancelBooking(bookingid);
@@ -491,24 +517,34 @@ namespace MealApp.Controllers
 
                 UserRepository.UpdateCredits(userid, -1);
 
-                int credits = user.Credits; //         because i think UpdateCredits will update it - RequestedBookings;
+                int credits = user.Credits; //         UpdateCredits will update it - RequestedBookings;
                 int bookeddays = user.BookingDays;
                 UserRepository.UpdateAllowedAccess(userid, bookeddays, credits);
 
                
-                // Send cancellation email
+                // Send cancellation email to user
                 string from = _configration["emailsettings:from"];
                 string subject = "Booking Cancellation Confirmation";
-                string body = $"Hello {user.FirstName},\n\nYour booking for {SelectedDate.ToString("MMMM dd, yyyy")} has been successfully canceled.\n\nBest regards,\nYour Rishabh Software";
+                string body = EmailBody.BookingCancellationEmailBody(user.FirstName, SelectedDate.ToString("MMMM dd, yyyy"), Bookingtype);
                 var emailModel = new EmailModel(Email, subject, body);
                 _emailRepository.SendEmail(emailModel);
+              
+
+
+                // Send confirmation email to admin  // admin : akshatjoshi2003@gmail.com
+                string to = "akshatjoshi2003@gmail.com";
+                from = _configration["emailsettings:from"];
+                string subject1 = $"Booking Confirmation of {user.FirstName}";
+                string body1 = EmailBody.BookingCancellationEmailBodytoAdmin(user.FirstName, SelectedDate.ToString("MMMM dd, yyyy"), Bookingtype);
+                var emailModel1 = new EmailModel(to, subject1, body1);
+                _emailRepository.SendEmail(emailModel1);
 
 
                 // Create and save notification
                 var notification = new Notification
                 {
                     UserId = userid,
-                    Description = "MealCancelled: " + $"Your meal has been Cancelled for {SelectedDate.ToString("MMMM dd, yyyy")}.",
+                    Description = "MealCancelled: " + $"Your meal has been Cancelled for{Bookingtype} on {SelectedDate.ToString("MMMM dd, yyyy")} .",
                     CreatedAt = DateTime.Now
                 };
                 await _NotificationRepository.AddNotificationAsync(notification);
@@ -522,18 +558,6 @@ namespace MealApp.Controllers
         }
 
       
-            
-           
 
-         
-
-
-
-
-        // DELETE api/<Booking>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
     }
 }
