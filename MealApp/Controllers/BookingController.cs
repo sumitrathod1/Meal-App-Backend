@@ -244,7 +244,7 @@ namespace MealApp.Controllers
             List<DateTime> conflictingDates = new List<DateTime>();
             for (DateTime CurrDate = StartDate; CurrDate <= EndDate; CurrDate = CurrDate.AddDays(1))
             {
-                if (existingBookings.Any(b => b.Date == CurrDate && b.Type == BookingType))
+                if (existingBookings.Any(b => b.Date.Date == CurrDate.Date && b.Type == BookingType))
                 {
                     conflictingDates.Add(CurrDate);
                 }
