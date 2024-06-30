@@ -51,7 +51,7 @@ namespace MealApp.Controllers
             DateTime expirationTime;   // fixed for lunch and dinner
 
             // check booking of this time (lunch or dinner) is booked or not
-             if(currentDate.Hour >= 15 && currentDate.Hour <25)
+             if(currentDate.Hour >= 13 && currentDate.Hour <18)
             {
                 //check for lunch booked or not
                 var booking = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Lunch && x.Status == Status.Booked && x.Date.Date == currentDate.Date);
@@ -66,10 +66,10 @@ namespace MealApp.Controllers
                     return BadRequest(new { message = "Coupon for today's Lunch is Aquired!" });
                 }
 
-                 expirationTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 24, 0, 0);  //expiredtime is fixed
+                 expirationTime = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, 23, 0, 0);  //expiredtime is fixed
 
             }
-            else if (currentDate.Hour >= 0 && currentDate.Hour < 2)  // check for dinner
+            else if (currentDate.Hour >= 18 && currentDate.Hour < 20)  // check for dinner
             {
                 //check for lunch booked or not
                 var booking = await _authContext.Bookings.FirstOrDefaultAsync(x => x.UserId == userId && x.Type == Models.Type.Dinner && x.Status == Status.Booked && x.Date.Date == currentDate.Date);
